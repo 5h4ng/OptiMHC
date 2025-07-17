@@ -286,7 +286,10 @@ class Pipeline:
             features = []
             if source:
                 for s in source:
-                    features.extend(psms.rescoring_features.get(s, []))
+                    if s in psms.rescoring_features:
+                        features.extend(psms.rescoring_features.get(s, []))
+                    else:
+                        logger.error(f"Source '{s}' not found in PSM features")
             logger.info(f"Features used in experiment '{exp_name}': {features}")
 
             results, models = self.rescore(

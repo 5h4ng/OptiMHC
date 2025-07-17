@@ -340,7 +340,7 @@ def generate_features(psms, config):
                         psms.charge_column,
                     ],
                     feature_key=spectral_similarity_generator.id_column,
-                    source="SpectraSimilarity",
+                    source="SpectralSimilarity",
                 )
                 del (
                     spectral_similarity_generator,
