@@ -253,7 +253,7 @@ class TestPsmContainerDataExport:
             assert os.path.exists(tmp_path)
             
             # Check DataFrame structure
-            expected_columns = ['SpecID', 'Label', 'ScanNr', 'feature1', 'feature2', 'Peptide', 'Proteins']
+            expected_columns = ['SpecId', 'Label', 'ScanNr', 'feature1', 'feature2', 'Peptide', 'Proteins']
             assert list(result_df.columns) == expected_columns
             
             # Check label conversion
