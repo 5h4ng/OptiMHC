@@ -731,26 +731,49 @@ class PsmContainer:
         self._psms.drop(columns=result_key, inplace=True)
         logger.info(f"Added rescore results to PSM data.")
 
-    def write_pin(self, output_file: str, source: List[str] = None) -> None:
+    def write_pin(self, output_file: str, style: str = 'default', source: List[str] = None) -> None:
         """
-        Write the PSM data to a Percolator input (PIN) file.
-
-        Percolator accepts input in a simple tab-delimited format where each row contains features associated with a single PSM:
-            id <tab> label <tab> scannr <tab> feature1 <tab> ... <tab> featureN <tab> peptide <tab> proteinId1 <tab> .. <tab> proteinIdM
-        With header:
-            SpecID <tab> Label <tab> ScanNr <tab> Feature1 <tab> ... <tab> FeatureN <tab> Peptide <tab> Proteins
+        Write the PSM data to a Percolator PIN file, supporting both generic Percolator and MSBooster-compatible formats.
 
         Parameters
         ----------
         output_file : str
-            The path to the output PIN file.
+            Path to the output PIN file.
+        style : str, optional
+            If set to 'msbooster', outputs only the columns required by MSBooster (SpecId, Label, ScanNr, retentiontime, rank, hyperscore or log10_evalue, Peptide, Proteins).
+            If set to 'default', outputs all features specified in `rescoring_features`, plus required Percolator columns.
         source : list of str, optional
-            List of feature sources to include. If None, include all sources.
+            List of feature sources to include. If None, includes all sources.
 
         Returns
         -------
         pd.DataFrame
             The DataFrame written to the PIN file.
+
+        Notes
+        -----
+        - The first three columns are always: SpecID, Label, ScanNr.
+        - For 'msbooster' style, the columns are: SpecId, Label, ScanNr, retentiontime, rank, hyperscore or log10_evalue, Peptide, Proteins.
+        - If `hit_rank_column` is not specified, rank is set to 1 for all rows.
+        - Either 'hyperscore' or 'expect' must be present in features; for 'expect', the column is written as 'log10_evalue'.
+        - The 'log10_evalue' column should contain the base-10 logarithm of the e-value.
+        - The 'Peptide' column is formatted with underscores (e.g., `_.PEPTIDE._`).
+        - For standard format, all features from `rescoring_features` are appended between ScanNr and Peptide columns.
+        - The 'Proteins' column is a semicolon-separated list if stored as a list or tuple.
+        - Label column is converted to 1 (target) and -1 (decoy), as required by Percolator.
+
+        Example output (default style):
+            SpecId	Label	ScanNr	feature1	feature2	...	Peptide	Proteins
+
+        Example output (msbooster style):
+            SpecId	Label	ScanNr	retentiontime	rank	hyperscore	Peptide	Proteins
+            or
+            SpecId	Label	ScanNr	retentiontime	rank	log10_evalue	Peptide	Proteins
+
+        Raises
+        ------
+        ValueError
+            If required columns are missing for the selected style.
         """
         df = self._psms.copy()
         # Check if the label column is str
@@ -767,6 +790,7 @@ class PsmContainer:
                 df[self.label_column].astype(bool).map({True: 1, False: -1})
             )
         logger.info("Writing PIN file to %s", output_file)
+        logger.info("Using style: %s", style)
 
         feature_cols = []
         if source is None:
@@ -779,17 +803,41 @@ class PsmContainer:
                 feature_cols.extend(self.rescoring_features[s])
 
         pin_df = pd.DataFrame()
-        pin_df["SpecID"] = df[self.spectrum_column]
+        pin_df["SpecId"] = df[self.spectrum_column]
         pin_df["Label"] = df["PercolatorLabel"]
         pin_df["ScanNr"] = df[self.scan_column]
-        for col in feature_cols:
-            pin_df[col] = df[col]
+        
+        if style == 'msbooster':
+            if self.retention_time_column:
+                pin_df["retentiontime"] = df[self.retention_time_column]
+            else:
+                raise ValueError("Retention time column is required for msbooster style.")
 
-        pin_df["Peptide"] = df[self.peptide_column]
+            pin_df["rank"] = df[self.hit_rank_column].astype(int) if self.hit_rank_column else 1
+            if 'hyperscore' in self.feature_columns:
+                pin_df["hyperscore"] = df['hyperscore']
+            elif 'expect' in self.feature_columns:
+                pin_df['log10_evalue'] = df['expect']
+            else:
+                raise ValueError("Either 'hyperscore' or 'expect' column is required for msbooster style.")
+            
+            # PEPTIDE -> _.PEPTIDE._
+            # Add _. at the front and ._ at the end of the peptide column
+            pin_df["Peptide"] = df[self.peptide_column].apply(
+                lambda x: f"_.{x}._" if isinstance(x, str) else x
+            )
+        elif style == 'default':
+            for col in feature_cols:
+                pin_df[col] = df[col]
+            pin_df["Peptide"] = df[self.peptide_column]
+        else:
+            raise ValueError(f"Unknown style: {style}. Use 'msbooster' or 'default'.")
+
         pin_df["Proteins"] = df[self.protein_column].apply(
             lambda x: ";".join(x) if isinstance(x, (list, tuple)) else x
         )
         pin_df.to_csv(output_file, sep="\t", index=False)
         logger.info("PIN file written to %s", output_file)
+
 
         return pin_df
