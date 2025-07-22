@@ -821,11 +821,17 @@ class PsmContainer:
             else:
                 raise ValueError("Either 'hyperscore' or 'expect' column is required for msbooster style.")
             
+            # Add other features and jump the hyperscore or expect column
+            for col in feature_cols:
+                if col not in ["hyperscore", "expect"]:
+                    pin_df[col] = df[col]
+        
             # PEPTIDE -> _.PEPTIDE._
             # Add _. at the front and ._ at the end of the peptide column
             pin_df["Peptide"] = df[self.peptide_column].apply(
                 lambda x: f"_.{x}._" if isinstance(x, str) else x
             )
+            
         elif style == 'default':
             for col in feature_cols:
                 pin_df[col] = df[col]
