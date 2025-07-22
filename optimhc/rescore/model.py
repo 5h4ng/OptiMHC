@@ -53,7 +53,7 @@ class XGBoostPercolatorModel(Model):
             rng=rng,
         )
 
-
+# TODO: not tested
 class RandomForestPercolatorModel(Model):
     def __init__(
         self,
