@@ -823,7 +823,7 @@ class PsmContainer:
             
             # Add other features and jump the hyperscore or expect column
             for col in feature_cols:
-                if col not in ["hyperscore", "expect"]:
+                if col not in ["hyperscore", "expect", self.hit_rank_column, self.retention_time_column]:
                     pin_df[col] = df[col]
         
             # PEPTIDE -> _.PEPTIDE._
