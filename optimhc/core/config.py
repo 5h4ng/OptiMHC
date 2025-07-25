@@ -155,6 +155,7 @@ class Config:
         else:
             raise ValueError("Config source must be a file path, dict, or None.")
         
+    # TODO: allele name validation
     def validate(self):
         """
         Validate the configuration using a fail-fast strategy.
@@ -180,19 +181,24 @@ class Config:
         - Optional parameter validity (TODO): we should validate 'allele' first !!!
         """
         if not isinstance(self._config, dict):
+            logger
             raise ValueError("Configuration must be a dictionary")
 
         required_fields = ["inputType", "inputFile", "outputDir", "rescore"]
         for field in required_fields:
             if field not in self._config:
+                logger.error(f"Missing required configuration: '{field}'")
                 raise ValueError(f"Missing required configuration: '{field}'")
             
             if field == "inputFile" and self._config[field] == []:
+                logger.error("inputFile list cannot be empty")
                 raise ValueError("inputFile list cannot be empty")
             elif self._config[field] in (None, "", []):
+                logger.error(f"Required configuration '{field}' cannot be empty")
                 raise ValueError(f"Required configuration '{field}' cannot be empty")
 
         if self._config["inputType"] not in ("pepxml", "pin"):
+            logger.error("inputType must be 'pepxml' or 'pin'")
             raise ValueError("inputType must be 'pepxml' or 'pin'")
 
         input_files = self._config["inputFile"]
@@ -200,16 +206,20 @@ class Config:
             logger.debug(f"inputFile is not a list or tuple: {input_files}. Converting to list.")
             self._config["inputFile"] = list(input_files)
         if not input_files:
+            logger.error("inputFile list cannot be empty")
             raise ValueError("inputFile list cannot be empty")
         
         for file_path in input_files:
             if not os.path.exists(file_path):
+                logger.error(f"Input file does not exist: {file_path}")
                 raise ValueError(f"Input file does not exist: {file_path}")
 
         output_dir = self._config["outputDir"]
         if not isinstance(output_dir, str):
+            logger.error("outputDir must be a string")
             raise ValueError("outputDir must be a string")
         if not output_dir:
+            logger.error("outputDir is required")
             raise ValueError("outputDir is required")     
         os.makedirs(output_dir, exist_ok=True)
 
@@ -220,11 +230,21 @@ class Config:
         }
         for fg in self._config["featureGenerator"]:
             if fg["name"] not in valid_generators:
+                logger.error(f"Invalid feature generator: {fg['name']}")
                 raise ValueError(f"Invalid feature generator: {fg['name']}")
+
+        valid_sources = valid_generators | {"Original", "ContigFeatures"}
+        if self._config.get("experiments", None) is not None: # experiment mode
+            if not isinstance(self._config["experiments"], list):
+                logger.error("experiments must be a list")
+                raise ValueError("experiments must be a list")
+            for exp in self._config["experiments"]:
+                for source in exp.get("source", []):
+                    if source not in valid_sources:
+                        logger.error(f"Invalid source in experiments: {source}")
+                        raise ValueError(f"Invalid source in experiments: {source}")
+
         
-
-
-
     def to_dict(self):
         return deepcopy(self._config)
 
