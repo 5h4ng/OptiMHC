@@ -96,7 +96,7 @@ class Pipeline:
             if input_type == "pepxml":
                 psms = read_pepxml(input_files, decoy_prefix=self.config["decoyPrefix"])
             elif input_type == "pin":
-                psms = read_pin(input_files)
+                psms = read_pin(input_files, retention_time_column=self.config.get("retentionTimeColumn"))
             else:
                 raise ValueError(f"Unsupported input type: {input_type}")
             return psms
