@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 def read_pin(
     pin_files: Union[str, List[str], pd.DataFrame],
     retention_time_column: Optional[str] = None,
+    remove_pre_nxt_aa: bool = False,
 ) -> PsmContainer:
     """
     Read PSMs from a Percolator INput (PIN) file.
@@ -67,7 +68,7 @@ def read_pin(
     protein = find_required_columns("Proteins", pin_df.columns)
 
     # Comet: P2PI20160713_pilling_C1RA2_BB72_P1_31_3_1
-    # MSFragger: P2PI20160713_pilling_C1RA2_BB72_P1.3104.3104.2_1
+    # Fragpipe: P2PI20160713_pilling_C1RA2_BB72_P1.3104.3104.2_1
 
     def parse_specid(specid: str) -> Tuple[str, int]:
         if "_" in specid:

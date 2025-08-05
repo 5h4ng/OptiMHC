@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: refactor the code to pass config as a parameter to the generators
+# TODO: factory method for feature generators
 # TODO: for allele-specific generators, we need to test the validation of the allele input first
 
 def generate_features(psms, config):
