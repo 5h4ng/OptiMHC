@@ -119,7 +119,7 @@ def read_pin(
         f"features={feature_columns}"
     )
 
-    pin_df[scan] = pin_df[scan].astype(str)
+    pin_df[scan] = pin_df[scan].astype(int)
     pin_df[specid] = pin_df[specid].astype(str)
     pin_df[peptide] = pin_df[peptide].astype(str)
     pin_df[protein] = pin_df[protein].astype(str)
