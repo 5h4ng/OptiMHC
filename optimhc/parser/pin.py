@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 def read_pin(
     pin_files: Union[str, List[str]],
     retention_time_column: Optional[str] = None,
+    remove_pre_nxt_aa: bool = False,
 ) -> PsmContainer:
     """
     Read PSMs from a Percolator INput (PIN) file.
@@ -66,8 +67,8 @@ def read_pin(
     peptide = find_required_columns("Peptide", pin_df.columns)
     protein = find_required_columns("Proteins", pin_df.columns)
 
-    # Comet: P2PI20160713_pilling_C1RA2_BB72_P1_31_3_1 (format: [filename]_[scan]_[charge]_[rank])
-    # MSFragger: P2PI20160713_pilling_C1RA2_BB72_P1.3104.3104.2_1
+    # Comet: P2PI20160713_pilling_C1RA2_BB72_P1_31_3_1
+    # Fragpipe: P2PI20160713_pilling_C1RA2_BB72_P1.3104.3104.2_1
 
     # Try to parse rank from SpecId
     def parse_specid(specid: str) -> Tuple[str, int]:

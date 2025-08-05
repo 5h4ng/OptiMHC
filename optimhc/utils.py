@@ -48,21 +48,26 @@ def convert_pfm_to_pwm(pfm_filename, pseudocount=0.8, background_freqs=None):
     return pwm
 
 
-def remove_pre_and_nxt_aa(peptide: str) -> str:
+def strip_flanking_and_charge(peptide: str) -> str:
     """
     Remove the pre and next amino acids from a peptide sequence.
+    Also when there is a charge state at the end of the peptide, remove it.
 
     Parameters
     ----------
     peptide : str
         The peptide sequence with flanking amino acids.
         Example: '.AANDAGYFNDEMAPIEVKTK.'
+        Example: 'F.VTVQGRAIC[119.0041]SDPNNKRVKN4.A'
+        Example: '-.RRVEHHDHAVVSGR4.L'
 
     Returns
     -------
     str
         The peptide sequence with flanking amino acids removed.
         Example: 'AANDAGYFNDEMAPIEVKTK'
+        Example: 'VTVQGRAIC[119.0041]SDPNNKRVKN'
+        Example: 'RRVEHHDHAVVSGR'
 
     Notes
     -----
@@ -71,7 +76,19 @@ def remove_pre_and_nxt_aa(peptide: str) -> str:
     """
     import re
 
-    return re.sub(r"^[^.]*\.|\.[^.]*$", "", peptide)
+    peptide = re.sub(r"^[^.]*\.|\.[^.]*$", "", peptide)
+    
+    # Some PIN may have charge state at the end of the peptide, e.g., R.RRVEHHDHAVVSGR4.L
+    # We should remove it to get the correct peptide sequence
+    # Fragpipe: F.VTVQGRAIC[119.0041]SDPNNKRVKN4.A, remove charge state '4' in the peptide
+    
+    if peptide and peptide[-1].isdigit():
+        peptide = peptide[:-1]
+    
+    return peptide
+    
+
+    
 
 
 def remove_modifications(peptide: str, keep_modification=None) -> str:
@@ -139,7 +156,7 @@ def preprocess_peptide(peptide: str) -> str:
     1. Removes flanking amino acids using remove_pre_and_nxt_aa
     2. Removes all modifications using remove_modifications
     """
-    peptide = remove_pre_and_nxt_aa(peptide)
+    peptide = strip_flanking_and_charge(peptide)
     peptide = remove_modifications(peptide)
     return peptide
 

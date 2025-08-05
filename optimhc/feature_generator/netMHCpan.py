@@ -183,7 +183,7 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
             The preprocessed peptide sequence.
         """
         if self.remove_pre_nxt_aa:
-            peptide = utils.remove_pre_and_nxt_aa(peptide)
+            peptide = utils.strip_flanking_and_charge(peptide)
         if self.remove_modification:
             peptide = utils.remove_modifications(peptide)
         # Replace any non-standard amino acids if necessary
