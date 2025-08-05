@@ -200,6 +200,10 @@ class Config:
         if self._config["inputType"] not in ("pepxml", "pin"):
             logger.error("inputType must be 'pepxml' or 'pin'")
             raise ValueError("inputType must be 'pepxml' or 'pin'")
+        
+        if self._config['inputType'] == 'pin' and self._config.get('retentionTimeColumn', None) is None:
+            logger.error("retentionTimeColumn must be specified when inputType is 'pin'")
+            raise ValueError("retentionTimeColumn must be specified when inputType is 'pin'")
 
         input_files = self._config["inputFile"]
         if not isinstance(input_files, (list, tuple)):

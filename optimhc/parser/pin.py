@@ -2,12 +2,13 @@ import logging
 from typing import List, Optional, Tuple, Union
 import pandas as pd
 from optimhc.psm_container import PsmContainer
+import re
 
 logger = logging.getLogger(__name__)
 
 
 def read_pin(
-    pin_files: Union[str, List[str], pd.DataFrame],
+    pin_files: Union[str, List[str]],
     retention_time_column: Optional[str] = None,
     remove_pre_nxt_aa: bool = False,
 ) -> PsmContainer:
@@ -16,9 +17,8 @@ def read_pin(
 
     Parameters
     ----------
-    pin_files : Union[str, List[str], pd.DataFrame]
-        The file path to the PIN file, a list of file paths, or a DataFrame
-        containing PIN data.
+    pin_files : Union[str, List[str]]
+        The file path to the PIN file or a list of file paths.
     retention_time_column : Optional[str], optional
         The column containing the retention time. If None, no retention time
         will be included.
@@ -33,7 +33,7 @@ def read_pin(
     This function:
     1. Reads PIN file(s) into a DataFrame
     2. Identifies required columns (case-insensitive)
-    3. Processes scan IDs and hit ranks
+    3. Processes scan IDs and hit ranks (Only support FragPipe PIN)
     4. Converts data types appropriately
     5. Creates a PsmContainer with the processed data
     """
@@ -70,43 +70,61 @@ def read_pin(
     # Comet: P2PI20160713_pilling_C1RA2_BB72_P1_31_3_1
     # Fragpipe: P2PI20160713_pilling_C1RA2_BB72_P1.3104.3104.2_1
 
+    # Try to parse rank from SpecId
     def parse_specid(specid: str) -> Tuple[str, int]:
         if "_" in specid:
             parts = specid.rsplit("_", 1)
             if len(parts) != 2:
-                raise ValueError(f"SpecId format invalid: {specid}")
-            unique_id = parts[0]
-            hit_rank = int(parts[1])
-            return unique_id, hit_rank
+                logger.warning(f"SpecId format unexpected: {specid}, using default rank 1")
+                return 1
+            try:
+                hit_rank = int(parts[1])
+                return hit_rank
+            except ValueError:
+                logger.warning(f"Could not parse rank from SpecId: {specid}, using default rank 1")
+                return 1
         else:
-            return specid, 1
+            return 1
 
     hit_rank = "rank"
     if "rank" in [c.lower() for c in pin_df.columns]:
         pass
     else:
-        pin_df[specid], pin_df["rank"] = zip(*pin_df[specid].apply(parse_specid))
+        # Parse SpecId to extract hit rank and update both columns
+        pin_df["rank"] = pin_df[specid].apply(parse_specid)
 
     retention_time_column = (
         find_required_columns(retention_time_column, pin_df.columns)
         if retention_time_column
         else None
     )
-
+    
+    # col: charge_[1,2,3,...] = 0, 1
+    charge_map = {col: int(re.search(r'(\d+)', col).group(1))
+                for col in pin_df.columns if re.search(r'charge[_]?(\d+)', col, re.IGNORECASE)}
+    def extract_charge(row):
+        for col, num in charge_map.items():
+            if int(row[col]) == 1:
+                return num
+        return None
+    pin_df['Charge'] = pin_df.apply(extract_charge, axis=1)
+    
     # feature columns: columns that are not non-feature columns
-    non_feature_columns = [label, scan, specid, peptide, protein]
+    non_feature_columns = [label, scan, specid, peptide, protein, hit_rank, 'Charge']
     feature_columns = [col for col in pin_df.columns if col not in non_feature_columns]
 
     logger.info(
-        f"Columns: label={label}, scan={scan}, specid={specid}, peptide={peptide}, \
-                protein={protein}, hit_rank={hit_rank}, retention_time={retention_time_column}, features={feature_columns}"
+        f"Columns: label={label}, scan={scan}, specid={specid}, peptide={peptide}, "
+        f"protein={protein}, hit_rank={hit_rank}, retention_time={retention_time_column}, "
+        f"features={feature_columns}"
     )
 
     pin_df[scan] = pin_df[scan].astype(str)
     pin_df[specid] = pin_df[specid].astype(str)
     pin_df[peptide] = pin_df[peptide].astype(str)
     pin_df[protein] = pin_df[protein].astype(str)
-    pin_df[hit_rank] = pin_df[hit_rank].astype(float).astype(int)
+    pin_df[hit_rank] = pin_df[hit_rank].astype(int)
+    pin_df['Charge'] = pin_df['Charge'].astype(int)
     if retention_time_column:
         pin_df[retention_time_column] = pin_df[retention_time_column].astype(float)
     for col in feature_columns:
@@ -124,6 +142,7 @@ def read_pin(
         ms_data_file_column=None,
         peptide_column=peptide,
         protein_column=protein,
+        charge_column='Charge',
         rescoring_features=rescoring_features,
         hit_rank_column=hit_rank,
         retention_time_column=retention_time_column,
