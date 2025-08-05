@@ -222,7 +222,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
 
     def _preprocess_peptides(self, peptide: str) -> str:
         if self.remove_pre_nxt_aa:
-            peptide = utils.remove_pre_and_nxt_aa(peptide)
+            peptide = utils.strip_flanking_and_charge(peptide)
         if self.remove_modification:
             peptide = utils.remove_modifications(peptide)
         # U -> C

@@ -151,7 +151,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         processed_peptide = peptide
 
         if self.remove_pre_nxt_aa:
-            processed_peptide = utils.remove_pre_and_nxt_aa(processed_peptide)
+            processed_peptide = utils.strip_flanking_and_charge(processed_peptide)
 
         if self.mod_dict is None:
             processed_peptide = utils.remove_modifications(processed_peptide)

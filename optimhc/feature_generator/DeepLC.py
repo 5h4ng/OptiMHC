@@ -197,7 +197,7 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
 
         if self.remove_pre_nxt_aa:
             df_deeplc["seq"] = df_deeplc["original_seq"].apply(
-                utils.remove_pre_and_nxt_aa
+                utils.strip_flanking_and_charge
             )
         else:
             df_deeplc["seq"] = df_deeplc["original_seq"]

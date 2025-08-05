@@ -270,6 +270,9 @@ def _parse_psm(psm_info, spec_info, decoy_prefix):
         "{*}search_score",
         "{*}alternative_protein",
     ]
+    
+    # TODO: Directly read modification_info
+    # TODO: The current code can not parse the n-terminal modification
     for element in psm_info.iter(*queries):
         if "modification_info" in element.tag:
             offset = 0

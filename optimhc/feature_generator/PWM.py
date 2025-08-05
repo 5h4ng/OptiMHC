@@ -614,7 +614,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
         features_df["clean_peptide"] = features_df["Peptide"]
         if self.remove_pre_nxt_aa:
             features_df["clean_peptide"] = features_df["Peptide"].apply(
-                utils.remove_pre_and_nxt_aa
+                utils.strip_flanking_and_charge
             )
         if self.remove_modification:
             features_df["clean_peptide"] = features_df["clean_peptide"].apply(
