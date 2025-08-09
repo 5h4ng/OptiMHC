@@ -104,7 +104,7 @@ def read_pin(
                 for col in pin_df.columns if re.search(r'charge[_]?(\d+)', col, re.IGNORECASE)}
     def extract_charge(row):
         for col, num in charge_map.items():
-            if int(row[col]) == 1:
+            if int(float(row[col])) == 1:
                 return num
         return None
     pin_df['Charge'] = pin_df.apply(extract_charge, axis=1)
@@ -123,8 +123,8 @@ def read_pin(
     pin_df[specid] = pin_df[specid].astype(str)
     pin_df[peptide] = pin_df[peptide].astype(str)
     pin_df[protein] = pin_df[protein].astype(str)
-    pin_df[hit_rank] = pin_df[hit_rank].astype(int)
-    pin_df['Charge'] = pin_df['Charge'].astype(int)
+    pin_df[hit_rank] = pin_df[hit_rank].astype(float).astype(int)
+    pin_df['Charge'] = pin_df['Charge'].astype(float).astype(int)
     if retention_time_column:
         pin_df[retention_time_column] = pin_df[retention_time_column].astype(float)
     for col in feature_columns:

@@ -731,6 +731,33 @@ class PsmContainer:
         self._psms.drop(columns=result_key, inplace=True)
         logger.info(f"Added rescore results to PSM data.")
 
+    def _convert_float_to_int(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Convert float columns in the DataFrame to int if they contain only integer values.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame to convert.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with float columns converted to int where applicable.
+        """
+        df = df.copy()
+        for col in df.select_dtypes(include=["float", 'float64', 'float32']):
+            series = df[col]
+            if series.hasnans:
+                logger.error(
+                    f"Column '{col}' contains NaN values. Cannot convert to int."
+                )
+                raise ValueError(f"Column '{col}' contains NaN values.")
+            is_integer = series.apply(float.is_integer).all()
+            if is_integer:
+                df[col] = series.astype(int)
+        return df
+    
     def write_pin(self, output_file: str, style: str = 'default', source: List[str] = None) -> None:
         """
         Write the PSM data to a Percolator PIN file, supporting both generic Percolator and MSBooster-compatible formats.
@@ -842,8 +869,7 @@ class PsmContainer:
         pin_df["Proteins"] = df[self.protein_column].apply(
             lambda x: ";".join(x) if isinstance(x, (list, tuple)) else x
         )
+        pin_df = self._convert_float_to_int(pin_df)
         pin_df.to_csv(output_file, sep="\t", index=False)
         logger.info("PIN file written to %s", output_file)
-
-
         return pin_df
