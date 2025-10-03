@@ -1,7 +1,7 @@
 experimentName: classII_example
 inputType: pepxml
 inputFile:
-  - ./data/AG20201214_FAIMS_DPB0101_DPA0201_93e6_1hr.pep.xml
+  - ../data/AG20201214_FAIMS_DPB0101_DPA0201_93e6_1hr.pep.xml
 decoyPrefix: DECOY_
 outputDir: ./examples/results
 visualization: True
@@ -11,8 +11,8 @@ showProgress: True
 # Mapping of FULL modified residue masses (residue+modification) to UNIMOD IDs
 # These masses can be found in pepXML parameters section
 modificationMap:
-  '147.035385': 'UNIMOD:35'  # Oxidation (M) - full modified residue mass
-  '160.030649': 'UNIMOD:4'   # Carbamidomethyl (C) - full modified residue mass
+  "147.035385": "UNIMOD:35" # Oxidation (M) - full modified residue mass
+  "160.030649": "UNIMOD:4" # Carbamidomethyl (C) - full modified residue mass
 
 # allele settings
 allele:
@@ -23,12 +23,12 @@ featureGenerator:
   - name: Basic
   - name: SpectralSimilarity
     params:
-      mzmlDir: ./data
+      mzmlDir: ../data
       spectrumIdPattern: (.+?)\.\d+\.\d+\.\d+
       model: AlphaPeptDeep_ms2_generic
       collisionEnergy: 28
       instrument: LUMOS
-      tolerance: 20  
+      tolerance: 20
       numTopPeaks: 36
       url: koina.wilhelmlab.org:443
   - name: DeepLC
@@ -41,7 +41,7 @@ featureGenerator:
       minOverlapLength: 8
       minLength: 9
       maxLength: 50
-      overlappingScore: expect 
+      overlappingScore: expect
   - name: PWM
     params:
       class: II

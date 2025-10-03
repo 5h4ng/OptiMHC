@@ -1,7 +1,7 @@
 experimentName: experiment_example
 inputType: pepxml
 inputFile:
-  - ./data/AG20201214_FAIMS_DPB0101_DPA0201_93e6_1hr.pep.xml
+  - ../data/AG20201214_FAIMS_DPB0101_DPA0201_93e6_1hr.pep.xml
 decoyPrefix: DECOY_
 outputDir: ./examples/results
 visualization: True
@@ -9,7 +9,7 @@ removePreNxtAA: False
 numProcesses: 32
 showProgress: True
 modificationMap:
-  '147.035385': 'UNIMOD:35'
+  "147.035385": "UNIMOD:35"
 
 # allele settings
 allele:
@@ -23,7 +23,7 @@ featureGenerator:
       minOverlapLength: 8
       minLength: 9
       maxLength: 50
-      overlappingScore: expect 
+      overlappingScore: expect
   - name: PWM
     params:
       class: II
@@ -33,9 +33,8 @@ experiments:
     source: ["Original"]
     model: "Percolator"
   - name: "Complete"
-    source: ["Original",  "OverlappingPeptide", "ContigFeatures", "PWM", "Basic"]
+    source: ["Original", "OverlappingPeptide", "ContigFeatures", "PWM", "Basic"]
     model: "Percolator"
   - name: "Shuffle"
-    source: ["Original",  "Basic", "OverlappingPeptide", "ContigFeatures", "PWM"]
+    source: ["Original", "Basic", "OverlappingPeptide", "ContigFeatures", "PWM"]
     model: "Percolator"
-
