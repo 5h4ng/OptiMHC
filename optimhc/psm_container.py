@@ -761,7 +761,8 @@ class PsmContainer:
     def write_pin(self, output_file: str, style: str = 'default', source: List[str] = None) -> None:
         """
         Write the PSM data to a Percolator PIN file, supporting both generic Percolator and MSBooster-compatible formats.
-
+        The style parameter is actually used to output a unified pin format file to benchmark the performance of different rescoring methods.
+        
         Parameters
         ----------
         output_file : str

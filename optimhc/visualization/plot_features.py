@@ -10,6 +10,12 @@ from optimhc.visualization.save_or_show_plot import save_or_show_plot
 logger = logging.getLogger(__name__)
 
 
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+import seaborn as sns  # 新增导入
+
+
 def plot_feature_importance(
     models, rescoring_features, save_path=None, sort=False, error=False, **kwargs
 ):
@@ -39,13 +45,31 @@ def plot_feature_importance(
     error : bool, optional
         If True, adds error bars to the plot. Default is False.
     **kwargs : dict
-        Additional plotting parameters such as 'figsize' and 'dpi'.
+        Additional plotting parameters:
+        - 'figsize' : tuple, default (15, 10)
+            Figure size in inches (width, height).
+        - 'dpi' : int, default 300
+            Resolution in dots per inch.
+        - 'palette' : str, default 'crest'
+            Seaborn color palette name. Options include 'crest', 'flare', 'mako',
+            'rocket', 'tab10', 'husl', 'Set2', etc.
 
     Notes
     -----
     The function automatically detects the model type based on the presence of the corresponding attribute.
     For linear models, it uses hatch patterns to differentiate between positive and negative coefficients.
     For XGBoost models, it uses solid bars since the importances are always positive.
+    
+    The color palette is automatically scaled to match the number of feature sources, ensuring
+    consistent colors between the bars and legend.
+
+    Examples
+    --------
+    >>> # Use default crest palette
+    >>> plot_feature_importance(models, rescoring_features, save_path='importance.png')
+    
+    >>> # Use a different palette
+    >>> plot_feature_importance(models, rescoring_features, palette='flare', sort=True, error=True)
     """
     # Determine the model type based on the first model in the list.
     if hasattr(models[0].estimator, "coef_"):
@@ -91,8 +115,10 @@ def plot_feature_importance(
     )
     logger.debug(f"Features: {sum(rescoring_features.values(), [])}")
 
+    # Extract plotting parameters
     figsize = kwargs.get("figsize", (15, 10))
     dpi = kwargs.get("dpi", 300)
+    palette_name = kwargs.get("palette", "Set2")
 
     all_features = []
     all_importances = []
@@ -100,10 +126,12 @@ def plot_feature_importance(
     all_colors = []
     all_hatches = []  # Hatch patterns will be applied only for linear models.
 
-    color_cycle = cycle(plt.cm.tab10.colors)
+    n_sources = len(rescoring_features)
+    colors = sns.color_palette(palette_name, n_colors=n_sources)
+    source_colors = dict(zip(rescoring_features.keys(), colors))
 
     for source, features in rescoring_features.items():
-        color = next(color_cycle)
+        color = source_colors[source]  # 修改：使用预分配的颜色
         indices = [
             i
             for i, name in enumerate(sum(rescoring_features.values(), []))
@@ -153,14 +181,14 @@ def plot_feature_importance(
             Patch(facecolor="white", edgecolor="black", hatch="\\\\", label="Negative"),
         ]
         legend_colors = [
-            Patch(facecolor=color, edgecolor="black", label=source)
-            for color, source in zip(plt.cm.tab10.colors, rescoring_features.keys())
+            Patch(facecolor=source_colors[source], edgecolor="black", label=source)
+            for source in rescoring_features.keys()
         ]
         ax.legend(handles=legend_hatches + legend_colors, loc="best")
     else:
         legend_colors = [
-            Patch(facecolor=color, edgecolor="black", label=source)
-            for color, source in zip(plt.cm.tab10.colors, rescoring_features.keys())
+            Patch(facecolor=source_colors[source], edgecolor="black", label=source)
+            for source in rescoring_features.keys()
         ]
         ax.legend(handles=legend_colors, loc="best")
 
@@ -172,7 +200,7 @@ def plot_feature_importance(
 
 def visualize_feature_correlation(psms: PsmContainer, save_path=None, **kwargs):
     """
-    Visualize the correlation between features in a DataFrame using a heatmap.
+    Visualize the correlation between features in a DataFrame using a scatter plot heatmap.
 
     Parameters
     ----------
@@ -181,26 +209,48 @@ def visualize_feature_correlation(psms: PsmContainer, save_path=None, **kwargs):
     save_path : str, optional
         The file path to save the plot. If not provided, the plot is displayed.
     **kwargs : dict
-        Additional plotting parameters such as `figsize` and `dpi`, etc.
-
-    Notes
-    -----
-    This function:
-    1. Extracts all rescoring features from the PsmContainer
-    2. Calculates the correlation matrix between features
-    3. Creates a heatmap visualization of the correlations
-    4. Uses a coolwarm colormap to show positive and negative correlations
+        Additional plotting parameters such as `figsize`, `dpi`, `height`, etc.
     """
-    figsize = kwargs.get("figsize", (40, 36))
-    dpi = kwargs.get("dpi", 300)
-
     rescoring_features = [
         item for sublist in psms.rescoring_features.values() for item in sublist
     ]
-    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-    corr = psms.psms[rescoring_features].corr()
-    # sns.heatmap(corr, annot=True, fmt=".2f", cmap='coolwarm', ax=ax)
-    sns.heatmap(corr, cmap="coolwarm", ax=ax)
-    ax.set_title("Feature Correlation Heatmap")
+    n_features = len(rescoring_features)
 
+    default_height = max(8, min(20, 8 + n_features * 0.15))
+    height = kwargs.get("height", default_height)
+    dpi = kwargs.get("dpi", 300)
+    
+    corr = psms.psms[rescoring_features].corr()
+    corr_mat = corr.stack().reset_index(name="correlation")
+    
+    g = sns.relplot(
+        data=corr_mat,
+        x="level_0", 
+        y="level_1", 
+        hue="correlation", 
+        size="correlation",
+        palette="vlag",  
+        hue_norm=(-1, 1), 
+        edgecolor=".7",
+        height=height, 
+        sizes=(50, 250), 
+        size_norm=(-.2, .8),
+        **{k: v for k, v in kwargs.items() if k not in ['height', 'dpi', 'figsize']}
+    )
+    
+    g.set(xlabel="", ylabel="", aspect="equal")
+    g.despine(left=True, bottom=True)
+    g.ax.margins(.02)
+    
+    for label in g.ax.get_xticklabels():
+        label.set_rotation(90)
+    
+    if n_features > 30:
+        fontsize = max(6, 10 - n_features * 0.05)
+        g.ax.tick_params(labelsize=fontsize)
+    
+    g.figure.suptitle("Feature Correlation Matrix", y=1.01, fontsize=14)
+    plt.tight_layout()
+    g.figure.dpi = dpi
+    
     save_or_show_plot(save_path, logger)
