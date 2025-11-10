@@ -14,6 +14,7 @@ DEFAULT_CONFIG = {
     "decoyPrefix": "DECOY_",
     "visualization": True,
     "saveModels": True,
+    "toFlashLFQ": True,
     "allele": [],
     "numProcess": 4,
     "removePreNxtAA": False,
@@ -232,6 +233,10 @@ class Config:
             "Basic", "OverlappingPeptide", "PWM", "MHCflurry", 
             "NetMHCpan", "NetMHCIIpan", "DeepLC", "SpectralSimilarity"
         }
+        
+        if self._config['featureGenerator'] is None:
+            logger.warning('No feature generators specified.')
+            self._config['featureGenerator'] = []
         for fg in self._config["featureGenerator"]:
             if fg["name"] not in valid_generators:
                 logger.error(f"Invalid feature generator: {fg['name']}")
