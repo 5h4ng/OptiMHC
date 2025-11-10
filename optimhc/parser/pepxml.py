@@ -85,7 +85,7 @@ def read_pepxml(pepxml_files, decoy_prefix="DECOY_"):
         "scan",
         "spectrum",
         "label",
-        "calc_mass",
+        "calc_mass", # Retain calc_mass for FlashLFQ compatibility
         "peptide",
         "proteins",
         "charge",
@@ -108,6 +108,7 @@ def read_pepxml(pepxml_files, decoy_prefix="DECOY_"):
         rescoring_features=rescoring_features,
         hit_rank_column="rank",
         retention_time_column="retention_time",
+        calculated_mass_column="calc_mass",
     )
 
 

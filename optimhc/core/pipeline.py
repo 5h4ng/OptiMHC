@@ -27,6 +27,7 @@ from optimhc.core.feature_generation import generate_features
 
 logger = logging.getLogger(__name__)
 
+# TODO: fix the type hinting for mokapot results
 class Pipeline:
     """
     Main pipeline class for optiMHC, encapsulating the full data processing workflow.
@@ -67,6 +68,7 @@ class Pipeline:
 
         self.visualization_enabled = self.config.get("visualization", True)
         self.save_models = self.config.get("saveModels", True)
+        self.to_flashlfq = self.config.get("toFlashLFQ", True)
         self.test_fdr = self.config.get("rescore", {}).get("testFDR", 0.01)
         self.model_type = self.config.get("rescore", {}).get("model", "Percolator")
         self.n_jobs = self.config.get("rescore", {}).get("numJobs", 1)
@@ -199,6 +201,9 @@ class Pipeline:
             logger.info(f"Saving models to {model_dir}")
             for i, model in enumerate(models):
                 model.save(os.path.join(model_dir, f"{file_root}.model{i}"))
+        
+        if self.to_flashlfq:
+            mokapot.to_flashLFQ(results, output_dir, file_name=f"{file_root}.FlashLFQ.txt")
 
     def visualize_results(self, psms, results, models, output_dir=None, sources=None):
         """

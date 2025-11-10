@@ -36,6 +36,8 @@ class PsmContainer:
         Column containing the charge state.
     retention_time_column : str, optional
         Column containing the retention time.
+    calculated_mass_column : str, optional
+        Column containing the calculated mass.
     metadata_column : str, optional
         Column containing metadata.
 
@@ -68,6 +70,7 @@ class PsmContainer:
         hit_rank_column: Optional[str] = None,
         charge_column: Optional[int] = None,
         retention_time_column: Optional[str] = None,
+        calculated_mass_column: Optional[str] = None,
         metadata_column: Optional[str] = None,
     ):
         self._psms = psms.copy()
@@ -83,6 +86,7 @@ class PsmContainer:
         self.metadata_column = metadata_column
         self.rescoring_features = rescoring_features
         self.charge_column = charge_column
+        self.calculated_mass_column = calculated_mass_column
         # rescore result column
         self.rescore_result_column = None
 
@@ -100,6 +104,7 @@ class PsmContainer:
         check_column(hit_rank_column)
         check_column(retention_time_column)
         check_column(charge_column)
+        check_column(calculated_mass_column)
 
         if psms[label_column].nunique() == 1 and psms[label_column].iloc[0] == True:
             raise ValueError("All PSMs are labeled as target. No decoy PSMs found.")

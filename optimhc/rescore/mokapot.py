@@ -1,10 +1,14 @@
 # rescore/mokapot.py
+# A wrapper around mokapot for rescoring PSMs and converting to flashLFQ format
 
 import logging
 from typing import List, Dict
 import mokapot
 from mokapot import LinearPsmDataset
 from optimhc.psm_container import PsmContainer
+import pandas as pd
+from pathlib import Path
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -107,8 +111,103 @@ def convert_to_mokapot_dataset(
         peptide_column=psms.peptide_column,
         protein_column=psms.protein_column,
         feature_columns=rescoring_features,
+        filename_column=psms.ms_data_file_column,
+        calcmass_column=psms.calculated_mass_column,
+        charge_column=psms.charge_column,
         scan_column=psms.scan_column,
         rt_column=psms.retention_time_column,
     )
 
     return dataset
+
+# Adapted from mokapot source code
+# https://github.com/wfondrie/mokapot
+
+def to_flashLFQ(results, output_dir, file_name):
+    logger.info("Saving results in FlashLFQ format.")
+    try:
+        assert not isinstance(results, str)
+        iter(results)
+    except TypeError:
+        results = [results]
+    except AssertionError:
+        raise ValueError("'results' should be a Confidence object, not a string.")
+    flashlfq = pd.concat([_format_flashlfq(c) for c in results])
+    flashlfq.to_csv(os.path.join(output_dir, file_name), sep="\t", index=False)
+    return os.path.join(output_dir, file_name)
+
+
+def _format_flashlfq(conf):
+    # Do some error checking for the required columns:
+    required = ["filename", "calcmass", "rt", "charge"]
+    missing = [c for c in required if conf._optional_columns[c] is None]
+    if missing:
+        missing = ", ".join([c + "_column" for c in missing])
+        raise ValueError(
+            "The following parameters must be specified when loading a "
+            "collection of PSMs in order to save them in FlashLFQ format: "
+            f"{missing}"
+        )
+
+    if conf._has_proteins:
+        proteins = conf._proteins
+    elif conf._protein_column is not None:
+        proteins = conf._protein_column
+    else:
+        proteins = None
+
+    # Get parameters
+    peptides = conf.peptides
+    filename_column = conf._optional_columns["filename"]
+    peptide_column = conf._peptide_column
+    mass_column = conf._optional_columns["calcmass"]
+    rt_column = conf._optional_columns["rt"]
+    charge_column = conf._optional_columns["charge"]
+    eval_fdr = conf._eval_fdr
+
+    # Create FlashLFQ dataframe
+    logger.info("FDR threshold for FlashLFQ export: %.4f", eval_fdr)
+    passing = peptides["mokapot q-value"] <= eval_fdr
+
+    out_df = pd.DataFrame()
+    out_df["File Name"] = peptides.loc[passing, filename_column].apply(
+        lambda x: Path(x).name
+    )
+
+    seq = peptides.loc[passing, peptide_column]
+    base_seq = (
+        seq.str.replace(r"[\[\(].*?[\]\)]", "", regex=True)
+        .str.replace(r"^.*?\.", "", regex=True)
+        .str.replace(r"\..*?$", "", regex=True)
+    )
+
+    out_df["Base Sequence"] = base_seq
+    out_df["Full Sequence"] = seq
+    out_df["Peptide Monoisotopic Mass"] = peptides.loc[passing, mass_column]
+    out_df["Scan Retention Time"] = peptides.loc[passing, rt_column] / 60
+    out_df["Precursor Charge"] = peptides.loc[passing, charge_column]
+
+    if isinstance(proteins, str):
+        # TODO: Add delimiter sniffing.
+        prots = peptides.loc[passing, proteins].str.replace(
+            "\t", "; ", regex=False
+        )
+    elif proteins is None:
+        prots = ""
+    else:
+        prots = base_seq.map(proteins.peptide_map.get)
+        shared = pd.isna(prots)
+        prots.loc[shared] = base_seq[shared].map(proteins.shared_peptides.get)
+
+    out_df["Protein Accession"] = prots
+    missing = pd.isna(out_df["Protein Accession"])
+    num_missing = missing.sum()
+    if num_missing:
+        logger.warning(
+            "- Discarding %i peptides that could not be mapped to protein "
+            "groups",
+            num_missing,
+        )
+        out_df = out_df.loc[~missing, :]
+
+    return out_df
