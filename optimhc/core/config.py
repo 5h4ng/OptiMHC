@@ -182,7 +182,7 @@ class Config:
         - Optional parameter validity (TODO): we should validate 'allele' first !!!
         """
         if not isinstance(self._config, dict):
-            logger
+            logger.error("Configuration must be a dictionary")
             raise ValueError("Configuration must be a dictionary")
 
         required_fields = ["inputType", "inputFile", "outputDir", "rescore"]
