@@ -753,7 +753,7 @@ class PsmContainer:
         df = df.copy()
         for col in df.select_dtypes(include=["float", 'float64', 'float32']):
             series = df[col]
-            if series.hasnans:
+            if series.isna().any():
                 logger.error(
                     f"Column '{col}' contains NaN values. Cannot convert to int."
                 )

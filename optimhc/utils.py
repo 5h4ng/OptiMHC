@@ -43,7 +43,12 @@ def convert_pfm_to_pwm(pfm_filename, pseudocount=0.8, background_freqs=None):
     pfm.drop(pfm.columns[-1], axis=1, inplace=True)  # Drop any extraneous columns
     pfm_pseudo = pfm + pseudocount
     ppm = pfm_pseudo.div(pfm_pseudo.sum(axis=0), axis=1)
-    pwm = np.log2(ppm.div(list(background_freqs.values())))
+    
+    # Handle both scalar and dictionary background frequencies
+    if isinstance(background_freqs, dict):
+        pwm = np.log2(ppm.div(list(background_freqs.values())))
+    else:
+        pwm = np.log2(ppm / background_freqs)
 
     return pwm
 
