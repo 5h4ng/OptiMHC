@@ -18,7 +18,7 @@ dependencies = [
     "lxml==5.3.0",
     "matplotlib==3.9.2",
     "mhctools @ git+https://github.com/openvax/mhctools.git@868ed09b4dfcab18aed563727d65bca3408476ea",
-    "setuptools>=61.0",  # mhctools uses pkg_resources at runtime
+    "setuptools<82,>=61",  # mhctools uses pkg_resources at runtime
     "mhcflurry==2.1.4",
     "mokapot==0.10.0",
     "networkx==3.2.1",
