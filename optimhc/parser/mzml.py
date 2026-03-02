@@ -1,4 +1,5 @@
 import logging
+
 import numpy as np
 import pandas as pd
 from pyteomics import mzml
@@ -65,18 +66,16 @@ def extract_mzml_data(mzml_filename, scan_ids=None):
                     charge = None
                     try:
                         charge = int(
-                            spectrum["precursorList"]["precursor"][0][
-                                "selectedIonList"
-                            ]["selectedIon"][0]["charge state"]
+                            spectrum["precursorList"]["precursor"][0]["selectedIonList"][
+                                "selectedIon"
+                            ][0]["charge state"]
                         )
                     except (KeyError, ValueError, IndexError):
                         pass
 
                     retention_time = None
                     try:
-                        retention_time = float(
-                            spectrum["scanList"]["scan"][0]["scan start time"]
-                        )
+                        retention_time = float(spectrum["scanList"]["scan"][0]["scan start time"])
                     except (KeyError, ValueError, IndexError):
                         pass
 

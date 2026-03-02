@@ -1,13 +1,15 @@
 # feature_generator/overlapping_peptide.py
 
 import logging
-import pandas as pd
-import numpy as np
-import networkx as nx
 from collections import defaultdict
-from typing import List, Dict, Union, Tuple
+from typing import Dict, List, Tuple, Union
+
+import networkx as nx
+import numpy as np
+import pandas as pd
 from scipy.stats import entropy
 from tqdm import tqdm
+
 from optimhc import utils
 from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
 from optimhc.psm_container import PsmContainer
@@ -306,9 +308,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
                                 else 0
                             )
                             if overlap_length > existing_weight:
-                                G.add_edge(
-                                    peptide, matching_peptide, weight=overlap_length
-                                )
+                                G.add_edge(peptide, matching_peptide, weight=overlap_length)
             # Handle the case where the entire peptide matches the prefix of another peptide
             suffix = peptide  # Full peptide as suffix
             if suffix in prefix_index:
@@ -426,9 +426,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
                 peptide_to_contig[peptide] = idx
         return peptide_to_contig
 
-    def _remove_redundant_peptides(
-        self, peptides: List[str]
-    ) -> Tuple[List[str], Dict[str, str]]:
+    def _remove_redundant_peptides(self, peptides: List[str]) -> Tuple[List[str], Dict[str, str]]:
         """
         Remove peptides that are fully contained in other peptides.
 
@@ -498,9 +496,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
         accepted_peptides, redundant_mapping = self._remove_redundant_peptides(peptides)
 
         logger.info("Constructing prefix index...")
-        prefix_index = self._construct_prefix_index(
-            accepted_peptides, self.min_overlap_length
-        )
+        prefix_index = self._construct_prefix_index(accepted_peptides, self.min_overlap_length)
 
         logger.info("Building overlap graph...")
         self._overlap_graph = self._build_overlap_graph(accepted_peptides, prefix_index)
@@ -522,11 +518,9 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
         # Map redundant peptides to their container peptides
         for redundant_peptide, container_peptide in redundant_mapping.items():
             if container_peptide not in self.peptide_to_contig:
+                logger.debug(f"Container peptide {container_peptide} not found in contigs.")
                 logger.debug(
-                    f"Container peptide {container_peptide} not found in contigs."
-                )
-                logger.debug(
-                    f"This may occur if the container peptide is a branching node in the overlap graph."
+                    "This may occur if the container peptide is a branching node in the overlap graph."
                 )
                 logger.debug(f"Assigning {container_peptide} to its own contig.")
 
@@ -539,9 +533,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
                 self.assembled_contigs.append(new_contig)
                 self.peptide_to_contig[container_peptide] = new_contig_idx
 
-            self.peptide_to_contig[redundant_peptide] = self.peptide_to_contig[
-                container_peptide
-            ]
+            self.peptide_to_contig[redundant_peptide] = self.peptide_to_contig[container_peptide]
 
         # Build a mapping from contig index to list of peptides (both accepted and redundant)
         full_contig_map = self._build_full_contig_map(peptides)
@@ -569,18 +561,18 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
             )
 
         features_df = pd.DataFrame(feature_list)
-        features_df["log_contig_member_count"] = features_df[
-            "contig_member_count"
-        ].apply(lambda x: np.log(x + 1e-6))
+        features_df["log_contig_member_count"] = features_df["contig_member_count"].apply(
+            lambda x: np.log(x + 1e-6)
+        )
         features_df["contig_member_rank"] = features_df["contig_member_count"].rank(
             method="min", ascending=False
         )
         features_df["log_contig_member_rank"] = features_df["contig_member_rank"].apply(
             lambda x: np.log(x + 1e-6)
         )
-        features_df["contig_seq_length_diff"] = features_df[
-            "contig_length"
-        ] - features_df["clean_peptide"].apply(len)
+        features_df["contig_seq_length_diff"] = features_df["contig_length"] - features_df[
+            "clean_peptide"
+        ].apply(len)
         features_df["contig_extension_ratio"] = features_df[
             "contig_seq_length_diff"
         ] / features_df["clean_peptide"].apply(len)
@@ -599,9 +591,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
         """
         if self.overlap_data is None:
             # 1. Preprocess and filter peptides
-            self.overlap_data = pd.DataFrame(
-                self.original_peptides, columns=["Peptide"]
-            )
+            self.overlap_data = pd.DataFrame(self.original_peptides, columns=["Peptide"])
             self.overlap_data["clean_peptide"] = self.overlap_data["Peptide"].apply(
                 self._preprocess_peptides
             )
@@ -610,9 +600,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
             )
 
             # 2. Compute overlaps and features for filtered peptides
-            features_df = self._calculate_overlap_contig_features(
-                self.filtered_peptides
-            )
+            features_df = self._calculate_overlap_contig_features(self.filtered_peptides)
 
             # 3. Map features back to the original peptides
             logger.info("Mapping features back to original peptides.")
@@ -628,25 +616,15 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
             if self.fill_missing == "median":
                 logger.info("Filling missing values with median.")
                 median_values = {
-                    "contig_member_count": self.overlap_data[
-                        "contig_member_count"
-                    ].median(),
+                    "contig_member_count": self.overlap_data["contig_member_count"].median(),
                     "log_contig_member_count": self.overlap_data[
                         "log_contig_member_count"
                     ].median(),
-                    "contig_member_rank": self.overlap_data[
-                        "contig_member_rank"
-                    ].median(),
-                    "log_contig_member_rank": self.overlap_data[
-                        "log_contig_member_rank"
-                    ].median(),
+                    "contig_member_rank": self.overlap_data["contig_member_rank"].median(),
+                    "log_contig_member_rank": self.overlap_data["log_contig_member_rank"].median(),
                     "contig_length": self.overlap_data["contig_length"].median(),
-                    "contig_seq_length_diff": self.overlap_data[
-                        "contig_seq_length_diff"
-                    ].median(),
-                    "contig_extension_ratio": self.overlap_data[
-                        "contig_extension_ratio"
-                    ].median(),
+                    "contig_seq_length_diff": self.overlap_data["contig_seq_length_diff"].median(),
+                    "contig_extension_ratio": self.overlap_data["contig_extension_ratio"].median(),
                 }
                 self.overlap_data.fillna(value=median_values, inplace=True)
             elif self.fill_missing == "zero":
@@ -695,9 +673,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
             if contig_idx is not None:
                 contig_info = self.assembled_contigs[contig_idx]
                 # Use full contig peptides (including redundant ones) if available
-                full_peptides = contig_info.get(
-                    "full_contig_peptides", contig_info["peptides"]
-                )
+                full_peptides = contig_info.get("full_contig_peptides", contig_info["peptides"])
                 brother_peptides = [p for p in full_peptides if p != peptide]
                 data_list.append(
                     {
@@ -709,9 +685,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
                 )
 
         full_data_df = pd.DataFrame(data_list)
-        self.full_data = self.overlap_data.merge(
-            full_data_df, on="clean_peptide", how="left"
-        )
+        self.full_data = self.overlap_data.merge(full_data_df, on="clean_peptide", how="left")
         return self.full_data
 
 
@@ -875,15 +849,11 @@ def assign_brother_aggregated_feature(
     if "contig_member_count" not in psms_df.columns:
         raise ValueError("'contig_member_count' column not found in PSMs.")
 
-    missing_features = [
-        feature for feature in feature_columns if feature not in psms_df.columns
-    ]
+    missing_features = [feature for feature in feature_columns if feature not in psms_df.columns]
     if missing_features:
         raise ValueError(f"Feature columns not found in PSMs: {missing_features}")
 
-    grouped_mean = (
-        psms_df.groupby("ContigSequence")[feature_columns].mean().reset_index()
-    )
+    grouped_mean = psms_df.groupby("ContigSequence")[feature_columns].mean().reset_index()
     grouped_mean = grouped_mean.rename(
         columns={feature: f"{feature}_contig_avg" for feature in feature_columns}
     )
@@ -893,11 +863,9 @@ def assign_brother_aggregated_feature(
     for feature in feature_columns:
         mean_feature = f"{feature}_contig_avg"
         sum_feature = f"{feature}_contig_sum"
-        psms_with_agg["contig_member_count"] = psms_with_agg[
-            "contig_member_count"
-        ].fillna(0)
-        psms_with_agg[sum_feature] = psms_with_agg[mean_feature] * (
-            psms_with_agg["contig_member_count"]
+        psms_with_agg["contig_member_count"] = psms_with_agg["contig_member_count"].fillna(0)
+        psms_with_agg[sum_feature] = (
+            psms_with_agg[mean_feature] * (psms_with_agg["contig_member_count"])
         )
         psms_with_agg[sum_feature].fillna(psms_with_agg[feature], inplace=True)
 

@@ -1,9 +1,10 @@
 # psm_container.py
 
 import logging
-from typing import List, Optional, Union, Dict
-import pandas as pd
+from typing import Dict, List, Optional, Union
+
 import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +107,9 @@ class PsmContainer:
         check_column(charge_column)
         check_column(calculated_mass_column)
 
-        if psms[label_column].nunique() == 1 and psms[label_column].iloc[0] == True:
+        if psms[label_column].nunique() == 1 and psms[label_column].iloc[0]:
             raise ValueError("All PSMs are labeled as target. No decoy PSMs found.")
-        elif psms[label_column].nunique() == 1 and psms[label_column].iloc[0] == False:
+        elif psms[label_column].nunique() == 1 and not psms[label_column].iloc[0]:
             raise ValueError("All PSMs are labeled as decoy. No target PSMs found.")
 
         def check_metadata_column(col):
@@ -130,7 +131,7 @@ class PsmContainer:
                         )
 
         check_rescoring_features(rescoring_features)
-        
+
         # check if the number of decoy psms is not 0
         if len(self.decoy_psms) == 0:
             logger.error("No decoy PSMs found. Please check the decoy prefix.")
@@ -146,7 +147,6 @@ class PsmContainer:
         logger.info("decoy psms: %d", len(self.decoy_psms))
         logger.info("unique peptides: %d", len(np.unique(self.peptides)))
         logger.info("rescoing features: %s", rescoring_features)
-        
 
     @property
     def psms(self) -> pd.DataFrame:
@@ -182,7 +182,7 @@ class PsmContainer:
         pd.DataFrame
             DataFrame with only target PSMs (label = True).
         """
-        return self._psms[self._psms[self.label_column] == True].copy()
+        return self._psms[self._psms[self.label_column]].copy()
 
     @property
     def decoy_psms(self) -> pd.DataFrame:
@@ -194,7 +194,7 @@ class PsmContainer:
         pd.DataFrame
             DataFrame with only decoy PSMs (label = False).
         """
-        return self._psms[self._psms[self.label_column] == False].copy()
+        return self._psms[~self._psms[self.label_column]].copy()
 
     @property
     def columns(self) -> List[str]:
@@ -374,9 +374,7 @@ class PsmContainer:
         # Create a list of sources to update
         sources_to_update = []
         for source, cols in self.rescoring_features.items():
-            self.rescoring_features[source] = [
-                col for col in cols if col not in features
-            ]
+            self.rescoring_features[source] = [col for col in cols if col not in features]
             if not self.rescoring_features[source]:
                 sources_to_update.append(source)
 
@@ -572,9 +570,7 @@ class PsmContainer:
         if isinstance(feature_key, str):
             feature_key = [feature_key]
 
-        new_feature_cols = [
-            col for col in features_df.columns if col not in feature_key
-        ]
+        new_feature_cols = [col for col in features_df.columns if col not in feature_key]
 
         for cols in new_feature_cols:
             if cols in self._psms.columns:
@@ -583,9 +579,7 @@ class PsmContainer:
                     logger.warning("No suffix provided. Using default suffix ")
                     raise ValueError("Duplicate columns exist. No suffix provided.")
                 else:
-                    logger.warning(
-                        f"Suffix '{suffix}' provided. Using suffix '{suffix}'."
-                    )
+                    logger.warning(f"Suffix '{suffix}' provided. Using suffix '{suffix}'.")
         logger.info(f"Adding {len(new_feature_cols)} new features from {source}.")
 
         if not new_feature_cols:
@@ -593,9 +587,7 @@ class PsmContainer:
             logger.warning(f"Feature key: {feature_key}; PSMs key: {psms_key}")
 
         if source in self.rescoring_features:
-            logger.warning(
-                f"{source} already exists in rescoring features. Overwriting."
-            )
+            logger.warning(f"{source} already exists in rescoring features. Overwriting.")
             self.drop_source(source)
 
         # TODO: reluctant logic
@@ -604,9 +596,7 @@ class PsmContainer:
         else:
             suffixes = ("", suffix)
 
-        self.rescoring_features[source] = [
-            col + suffixes[1] for col in new_feature_cols
-        ]
+        self.rescoring_features[source] = [col + suffixes[1] for col in new_feature_cols]
         features_df = features_df.rename(
             columns={col: col + suffixes[1] for col in new_feature_cols}
         )
@@ -618,14 +608,10 @@ class PsmContainer:
 
         if feature_key != psms_key:
             cols_to_drop = [
-                col
-                for col in feature_key
-                if col not in psms_key and col in self._psms.columns
+                col for col in feature_key if col not in psms_key and col in self._psms.columns
             ]
             if cols_to_drop:
-                logger.debug(
-                    f"Dropping columns from feature_key not in psms_key: {cols_to_drop}"
-                )
+                logger.debug(f"Dropping columns from feature_key not in psms_key: {cols_to_drop}")
                 self._psms.drop(columns=cols_to_drop, inplace=True)
 
         if len(self._psms) != original_len:
@@ -656,22 +642,16 @@ class PsmContainer:
                     logger.warning("No suffix provided. Using default suffix.")
                     raise ValueError("Duplicate columns exist. No suffix provided.")
                 else:
-                    logger.warning(
-                        f"Suffix '{suffix}' provided. Using suffix '{suffix}'."
-                    )
+                    logger.warning(f"Suffix '{suffix}' provided. Using suffix '{suffix}'.")
 
-        logger.info(
-            f"Adding {len(new_feature_cols)} new features from {source} by index."
-        )
+        logger.info(f"Adding {len(new_feature_cols)} new features from {source} by index.")
 
         if not new_feature_cols:
             logger.warning("No new features to add.")
             raise ValueError("No new features to add.")
 
         if source in self.rescoring_features:
-            logger.warning(
-                f"{source} already exists in rescoring features. Overwriting."
-            )
+            logger.warning(f"{source} already exists in rescoring features. Overwriting.")
             self.drop_source(source)
 
         if suffix is None:
@@ -679,9 +659,7 @@ class PsmContainer:
         else:
             suffixes = ("", suffix)
 
-        self.rescoring_features[source] = [
-            col + suffixes[1] for col in new_feature_cols
-        ]
+        self.rescoring_features[source] = [col + suffixes[1] for col in new_feature_cols]
         features_df.rename(
             columns={col: col + suffixes[1] for col in new_feature_cols}, inplace=True
         )
@@ -734,7 +712,7 @@ class PsmContainer:
             validate="one_to_one",
         )
         self._psms.drop(columns=result_key, inplace=True)
-        logger.info(f"Added rescore results to PSM data.")
+        logger.info("Added rescore results to PSM data.")
 
     def _convert_float_to_int(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -751,23 +729,23 @@ class PsmContainer:
             DataFrame with float columns converted to int where applicable.
         """
         df = df.copy()
-        for col in df.select_dtypes(include=["float", 'float64', 'float32']):
+        for col in df.select_dtypes(include=["float", "float64", "float32"]):
             series = df[col]
             if series.isna().any():
-                logger.error(
-                    f"Column '{col}' contains NaN values. Cannot convert to int."
-                )
+                logger.error(f"Column '{col}' contains NaN values. Cannot convert to int.")
                 raise ValueError(f"Column '{col}' contains NaN values.")
             is_integer = series.apply(float.is_integer).all()
             if is_integer:
                 df[col] = series.astype(int)
         return df
-    
-    def write_pin(self, output_file: str, style: str = 'default', source: List[str] = None) -> None:
+
+    def write_pin(
+        self, output_file: str, style: str = "default", source: List[str] = None
+    ) -> None:
         """
         Write the PSM data to a Percolator PIN file, supporting both generic Percolator and MSBooster-compatible formats.
         The style parameter is actually used to output a unified pin format file to benchmark the performance of different rescoring methods.
-        
+
         Parameters
         ----------
         output_file : str
@@ -819,9 +797,7 @@ class PsmContainer:
         else:
             # try to convert to bool
             logger.warning("Label column is not str or bool. Converting to bool.")
-            df["PercolatorLabel"] = (
-                df[self.label_column].astype(bool).map({True: 1, False: -1})
-            )
+            df["PercolatorLabel"] = df[self.label_column].astype(bool).map({True: 1, False: -1})
         logger.info("Writing PIN file to %s", output_file)
         logger.info("Using style: %s", style)
 
@@ -839,33 +815,40 @@ class PsmContainer:
         pin_df["SpecId"] = df[self.spectrum_column]
         pin_df["Label"] = df["PercolatorLabel"]
         pin_df["ScanNr"] = df[self.scan_column]
-        
-        if style == 'msbooster':
+
+        if style == "msbooster":
             if self.retention_time_column:
                 pin_df["retentiontime"] = df[self.retention_time_column]
             else:
                 raise ValueError("Retention time column is required for msbooster style.")
 
             pin_df["rank"] = df[self.hit_rank_column].astype(int) if self.hit_rank_column else 1
-            if 'hyperscore' in self.feature_columns:
-                pin_df["hyperscore"] = df['hyperscore']
-            elif 'expect' in self.feature_columns:
-                pin_df['log10_evalue'] = df['expect']
+            if "hyperscore" in self.feature_columns:
+                pin_df["hyperscore"] = df["hyperscore"]
+            elif "expect" in self.feature_columns:
+                pin_df["log10_evalue"] = df["expect"]
             else:
-                raise ValueError("Either 'hyperscore' or 'expect' column is required for msbooster style.")
-            
+                raise ValueError(
+                    "Either 'hyperscore' or 'expect' column is required for msbooster style."
+                )
+
             # Add other features and jump the hyperscore or expect column
             for col in feature_cols:
-                if col not in ["hyperscore", "expect", self.hit_rank_column, self.retention_time_column]:
+                if col not in [
+                    "hyperscore",
+                    "expect",
+                    self.hit_rank_column,
+                    self.retention_time_column,
+                ]:
                     pin_df[col] = df[col]
-        
+
             # PEPTIDE -> _.PEPTIDE._
             # Add _. at the front and ._ at the end of the peptide column
             pin_df["Peptide"] = df[self.peptide_column].apply(
                 lambda x: f"_.{x}._" if isinstance(x, str) else x
             )
-            
-        elif style == 'default':
+
+        elif style == "default":
             for col in feature_cols:
                 pin_df[col] = df[col]
             pin_df["Peptide"] = df[self.peptide_column]

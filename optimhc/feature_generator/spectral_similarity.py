@@ -1,16 +1,17 @@
 # feature_generator/spectral_similarity.py
 
 import logging
-import pandas as pd
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
-from typing import List, Dict, Tuple, Union, Optional
-import os
-from scipy.stats import pearsonr, spearmanr
-from scipy.spatial.distance import cosine
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
-from optimhc import utils
-from optimhc.parser import extract_mzml_data
+import pandas as pd
 from koinapy import Koina
+from scipy.spatial.distance import cosine
+from scipy.stats import pearsonr, spearmanr
+
+from optimhc import utils
+from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.parser import extract_mzml_data
 
 logger = logging.getLogger(__name__)
 
@@ -73,9 +74,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         self.results = None
         self._raw_predictions = None
 
-        logger.info(
-            f"Initializing SpectralSimilarityFeatureGenerator with {len(peptides)} PSMs"
-        )
+        logger.info(f"Initializing SpectralSimilarityFeatureGenerator with {len(peptides)} PSMs")
         logger.info(f"Using model: {self.model_type}")
 
         self.df = pd.DataFrame(
@@ -88,12 +87,8 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             }
         )
 
-        self.df["processed_peptide"] = self.df["peptide"].apply(
-            self._preprocess_peptide
-        )
-        logger.info(
-            f"Recevied {len(self.df)} PSMs for spectral similarity feature generation"
-        )
+        self.df["processed_peptide"] = self.df["peptide"].apply(self._preprocess_peptide)
+        logger.info(f"Recevied {len(self.df)} PSMs for spectral similarity feature generation")
 
     @property
     def id_column(self) -> List[str]:
@@ -208,9 +203,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         # Merge spectral data from all files
         if exp_spectra_dfs:
             exp_spectra_df = pd.concat(exp_spectra_dfs, ignore_index=True)
-            logger.info(
-                f"Successfully extracted {len(exp_spectra_df)} experimental spectra"
-            )
+            logger.info(f"Successfully extracted {len(exp_spectra_df)} experimental spectra")
             return exp_spectra_df
         else:
             logger.warning("No experimental spectral data found")
@@ -270,7 +263,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             logger.error("- Input parameters compatibility")
             logger.error("- Supported modifications")
             logger.error("- Peptide length limits")
-            logger.error(f"Details at: https://koina.proteomicsdb.org/")
+            logger.error("Details at: https://koina.proteomicsdb.org/")
 
             if self.model_type == "AlphaPeptDeep_ms2_generic":
                 logger.info(
@@ -438,9 +431,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
                 - Additional info including original sorted arrays
         """
         # Sort both experimental and predicted spectra by m/z
-        exp_mz_sorted, exp_intensity_sorted, _ = self._sort_spectrum_by_mz(
-            exp_mz, exp_intensity
-        )
+        exp_mz_sorted, exp_intensity_sorted, _ = self._sort_spectrum_by_mz(exp_mz, exp_intensity)
 
         if pred_annotation is not None:
             pred_mz_sorted, pred_intensity_sorted, pred_annotation_sorted = (
@@ -596,10 +587,8 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         )
 
         # Then get top N peaks for compatibility with existing code
-        top_exp_intensity, top_pred_intensity, top_matched_indices = (
-            self._get_top_peaks_vectors(
-                all_exp_intensity, all_pred_intensity, all_matched_indices, self.top_n
-            )
+        top_exp_intensity, top_pred_intensity, top_matched_indices = self._get_top_peaks_vectors(
+            all_exp_intensity, all_pred_intensity, all_matched_indices, self.top_n
         )
 
         return top_exp_intensity, top_pred_intensity, top_matched_indices
@@ -748,7 +737,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         try:
             r, _ = spearmanr(exp_vector, pred_vector)
             return r
-        except:
+        except Exception:
             return
 
     def _calculate_pearson_correlation(
@@ -780,7 +769,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         try:
             r, _ = pearsonr(exp_vector, pred_vector)
             return r
-        except:
+        except Exception:
             return 0.0
 
     def _calculate_mean_squared_error(
@@ -965,12 +954,8 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             exp_vector, pred_vector
         )
         cosine_similarity = self._calculate_cosine_similarity(exp_vector, pred_vector)
-        pearson_correlation = self._calculate_pearson_correlation(
-            exp_vector, pred_vector
-        )
-        spearman_correlation = self._calculate_spearman_correlation(
-            exp_vector, pred_vector
-        )
+        pearson_correlation = self._calculate_pearson_correlation(exp_vector, pred_vector)
+        spearman_correlation = self._calculate_spearman_correlation(exp_vector, pred_vector)
         mean_squared_error = self._calculate_mean_squared_error(exp_vector, pred_vector)
         unweighted_entropy_similarity = self._calculate_unweighted_entropy_similarity(
             exp_vector, pred_vector
@@ -978,9 +963,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         predicted_seen_nonzero, predicted_not_seen = self._calculate_predicted_counts(
             exp_vector, pred_vector
         )
-        bray_curtis_similarity = self._calculate_bray_curtis_similarity(
-            exp_vector, pred_vector
-        )
+        bray_curtis_similarity = self._calculate_bray_curtis_similarity(exp_vector, pred_vector)
 
         return {
             "spectral_angle_similarity": spectral_angle_similarity,
@@ -1026,14 +1009,10 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         if len(psm_df) != len(self.df):
             logger.warning("Some PSMs were not found in experimental spectral data")
 
-        psm_df = pd.merge(
-            psm_df, pred_spectra_df, on=["processed_peptide", "charge"], how="inner"
-        )
+        psm_df = pd.merge(psm_df, pred_spectra_df, on=["processed_peptide", "charge"], how="inner")
         results = []
 
-        logger.info(
-            "Matching experimental and predicted spectra... This may take a while."
-        )
+        logger.info("Matching experimental and predicted spectra... This may take a while.")
         for _, row in psm_df.iterrows():
             exp_mz = row["mz"]
             exp_intensity = row["intensity"]
@@ -1078,13 +1057,9 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
                 "top_matched_indices": top_matched_indices,
                 **similarity_features,
                 "exp_mz_sorted": additional_info["exp_mz_sorted"].tolist(),
-                "exp_intensity_sorted": additional_info[
-                    "exp_intensity_sorted"
-                ].tolist(),
+                "exp_intensity_sorted": additional_info["exp_intensity_sorted"].tolist(),
                 "pred_mz_sorted": additional_info["pred_mz_sorted"].tolist(),
-                "pred_intensity_sorted": additional_info[
-                    "pred_intensity_sorted"
-                ].tolist(),
+                "pred_intensity_sorted": additional_info["pred_intensity_sorted"].tolist(),
             }
 
             # Add annotations if available
@@ -1116,11 +1091,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             "exp_intensity_sorted",
             "pred_mz_sorted",
             "pred_intensity_sorted",
-            (
-                "pred_annotation_sorted"
-                if "pred_annotation_sorted" in psm_df.columns
-                else None
-            ),
+            ("pred_annotation_sorted" if "pred_annotation_sorted" in psm_df.columns else None),
             "exp_vector",
             "pred_vector",
             "matched_indices",

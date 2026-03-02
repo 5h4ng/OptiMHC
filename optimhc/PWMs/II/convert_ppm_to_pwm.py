@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import os
 import math
+import os
 
 # Define the background frequency
 BACKGROUND_FREQ = 1.0 / 20  # 0.05

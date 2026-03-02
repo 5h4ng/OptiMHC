@@ -1,10 +1,10 @@
 # rescore/model.py
 
 import numpy as np
+from mokapot.model import Model
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, KFold
 from xgboost import XGBClassifier
-from sklearn.ensemble import RandomForestClassifier
-from mokapot.model import Model
 
 GRID_XGB = {
     "scale_pos_weight": np.logspace(0, 2, 3),
@@ -52,6 +52,7 @@ class XGBoostPercolatorModel(Model):
             override=override,
             rng=rng,
         )
+
 
 # TODO: not tested
 class RandomForestPercolatorModel(Model):

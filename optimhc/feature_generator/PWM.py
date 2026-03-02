@@ -1,12 +1,14 @@
 # feature_generator/PWM.py
 
-import os
-import pandas as pd
-import numpy as np
-from typing import Optional, Dict, Union, List, Tuple
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
 import logging
+import os
+from typing import Dict, List, Optional, Tuple, Union
+
+import numpy as np
+import pandas as pd
+
 from optimhc import utils
+from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -176,9 +178,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
         if mhc_class == "I" and anchors > 0:
             logger.info("Number of anchors: {}".format(self.anchors))
         self.remove_pre_nxt_aa = remove_pre_nxt_aa
-        logger.info(
-            "Remove pre and next amino acids: {}".format(self.remove_pre_nxt_aa)
-        )
+        logger.info("Remove pre and next amino acids: {}".format(self.remove_pre_nxt_aa))
         self.remove_modification = remove_modification
         logger.info("Remove modifications: {}".format(self.remove_modification))
         logger.info(
@@ -256,9 +256,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                     allele_dir = f"{allele_dir[:4]}_{allele_dir[4:]}"
             allele_dir_path = os.path.join(class_path, allele_dir)
             pwm_files_list = utils.list_all_files_in_directory(allele_dir_path)
-            logger.info(
-                f"Searching for PWM files for allele {allele} in {allele_dir_path}"
-            )
+            logger.info(f"Searching for PWM files for allele {allele} in {allele_dir_path}")
             logger.debug(f"Found PWM files for allele {allele}: {pwm_files_list}")
             if self.mhc_class == "I":
                 for pwm_file in pwm_files_list:
@@ -270,15 +268,11 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                         logger.error(
                             f"Mer length not found in PWM file name: {pwm_file}. Assuming the tailing number is the mer length."
                         )
-                        raise ValueError(
-                            f"Mer length not found in PWM file name: {pwm_file}"
-                        )
+                        raise ValueError(f"Mer length not found in PWM file name: {pwm_file}")
             elif self.mhc_class == "II":
                 # class II PWMs are fixed length: 9, which indicates the core length
                 if len(pwm_files_list) == 1:
-                    pwm_files[allele][PWMFeatureGenerator.CLASS_II_CORE_LENGTH] = (
-                        pwm_files_list[0]
-                    )
+                    pwm_files[allele][PWMFeatureGenerator.CLASS_II_CORE_LENGTH] = pwm_files_list[0]
                 else:
                     logger.error(
                         f"Expected 1 PWM file for allele {allele}, found {len(pwm_files_list)}: {pwm_files_list}"
@@ -355,14 +349,10 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                     logger.error(f"PWM file not found: {file_path}")
                     raise FileNotFoundError(f"PWM file not found: {file_path}")
                 try:
-                    pwm = pd.read_csv(
-                        file_path, sep='\s+', header=None, index_col=0
-                    )
-                    pwm.columns = [f"{pos+1}" for pos in range(pwm.shape[1])]
+                    pwm = pd.read_csv(file_path, sep="\s+", header=None, index_col=0)
+                    pwm.columns = [f"{pos + 1}" for pos in range(pwm.shape[1])]
                     pwms[allele][mer] = pwm
-                    logger.debug(
-                        f"Loaded PWM for allele {allele}, length {mer} from {file_path}"
-                    )
+                    logger.debug(f"Loaded PWM for allele {allele}, length {mer} from {file_path}")
                 except Exception as e:
                     logger.error(f"Error loading PWM file {file_path}: {e}")
                     raise e
@@ -400,8 +390,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                 score = sum(pwm.loc[aa, str(i + 1)] for i, aa in enumerate(peptide))
             except KeyError as e:
                 logger.error(
-                    f"Residue '{e}' not found in PWM for allele={allele}, "
-                    f"peptide={peptide}, length={peptide_len}"
+                    f"Residue '{e}' not found in PWM for allele={allele}, peptide={peptide}, length={peptide_len}"
                 )
                 raise ValueError(f"Residue '{e}' not found in PWM.")
             return score
@@ -459,8 +448,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                 )
             except KeyError as e:
                 logger.error(
-                    f"Residue '{e}' not found in PWM for allele={allele}, "
-                    f"peptide={peptide} (subpep={subpeptide_9})."
+                    f"Residue '{e}' not found in PWM for allele={allele}, peptide={peptide} (subpep={subpeptide_9})."
                 )
                 raise ValueError(f"Residue '{e}' not found in PWM.")
 
@@ -470,8 +458,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                 best_core_start_idx = start_idx
 
         logger.debug(
-            f"Peptide: {peptide}, best core: {best_core}, "
-            f"start_idx: {best_core_start_idx}, score: {best_score}"
+            f"Peptide: {peptide}, best core: {best_core}, start_idx: {best_core_start_idx}, score: {best_score}"
         )
 
         # Compute N-flank and C-flank (up to 3 residues)
@@ -484,32 +471,27 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
         c_flank_seq = peptide[c_flank_start:c_flank_end]
 
         # Pad with 'X' if flank < 3 residues
-        n_flank_seq = (("X" * (3 - len(n_flank_seq))) + n_flank_seq)[
-            -3:
-        ]  # ensure length = 3
-        c_flank_seq = (c_flank_seq + ("X" * (3 - len(c_flank_seq))))[
-            :3
-        ]  # ensure length = 3
+        n_flank_seq = (("X" * (3 - len(n_flank_seq))) + n_flank_seq)[-3:]  # ensure length = 3
+        c_flank_seq = (c_flank_seq + ("X" * (3 - len(c_flank_seq))))[:3]  # ensure length = 3
 
         n_flank_score = 0.0
         c_flank_score = 0.0
         for i, aa in enumerate(n_flank_seq):
             try:
-                n_flank_score += n_flank_pwm.loc[aa, f"Pos{i+1}"]
+                n_flank_score += n_flank_pwm.loc[aa, f"Pos{i + 1}"]
             except KeyError:
                 # 'X' or unknown -> 0
                 pass
 
         for i, aa in enumerate(c_flank_seq):
             try:
-                c_flank_score += c_flank_pwm.loc[aa, f"Pos{i+1}"]
+                c_flank_score += c_flank_pwm.loc[aa, f"Pos{i + 1}"]
             except KeyError:
                 # 'X' or unknown -> 0
                 pass
 
         logger.debug(
-            f"n_flank: {n_flank_seq}, c_flank: {c_flank_seq}, "
-            f"n_flank_score: {n_flank_score}, c_flank_score: {c_flank_score}"
+            f"n_flank: {n_flank_seq}, c_flank: {c_flank_seq}, n_flank_score: {n_flank_score}, c_flank_score: {c_flank_score}"
         )
 
         return (best_score, n_flank_score, c_flank_score)
@@ -641,11 +623,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                     f"Missing PWM scores for {na_count} peptides. Using median for imputation."
                 )
                 features_df.fillna(
-                    {
-                        f"PWM_Score_{allele}": features_df[
-                            f"PWM_Score_{allele}"
-                        ].median()
-                    },
+                    {f"PWM_Score_{allele}": features_df[f"PWM_Score_{allele}"].median()},
                     inplace=True,
                 )
 
@@ -660,26 +638,16 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                         anchor_dict[mer_len] = self._most_conserved_postions(
                             self.pwms[allele][mer_len], self.anchors
                         )
-                    logger.info(
-                        f"Most conserved positions for allele {allele}: {anchor_dict}"
-                    )
-                    features_df[f"Anchor_Score_{allele}"] = features_df[
-                        "clean_peptide"
-                    ].apply(
-                        lambda peptide: self._cal_anchor_score(
-                            peptide, allele, anchor_dict
-                        )
+                    logger.info(f"Most conserved positions for allele {allele}: {anchor_dict}")
+                    features_df[f"Anchor_Score_{allele}"] = features_df["clean_peptide"].apply(
+                        lambda peptide: self._cal_anchor_score(peptide, allele, anchor_dict)
                     )
                     na_count = features_df[f"Anchor_Score_{allele}"].isna().sum()
                     logger.info(
                         f"Missing anchor scores for {na_count} peptides. Using median for imputation."
                     )
                     features_df.fillna(
-                        {
-                            f"Anchor_Score_{allele}": features_df[
-                                f"Anchor_Score_{allele}"
-                            ].median()
-                        },
+                        {f"Anchor_Score_{allele}": features_df[f"Anchor_Score_{allele}"].median()},
                         inplace=True,
                     )
 

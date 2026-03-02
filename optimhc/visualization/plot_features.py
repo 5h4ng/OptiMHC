@@ -1,19 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import logging
-from itertools import cycle
-from matplotlib.patches import Patch
-from optimhc.psm_container import PsmContainer
+
+import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
+from matplotlib.patches import Patch
+
+from optimhc.psm_container import PsmContainer
 from optimhc.visualization.save_or_show_plot import save_or_show_plot
 
 logger = logging.getLogger(__name__)
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
-import seaborn as sns  # 新增导入
 
 
 def plot_feature_importance(
@@ -59,7 +54,7 @@ def plot_feature_importance(
     The function automatically detects the model type based on the presence of the corresponding attribute.
     For linear models, it uses hatch patterns to differentiate between positive and negative coefficients.
     For XGBoost models, it uses solid bars since the importances are always positive.
-    
+
     The color palette is automatically scaled to match the number of feature sources, ensuring
     consistent colors between the bars and legend.
 
@@ -67,7 +62,7 @@ def plot_feature_importance(
     --------
     >>> # Use default crest palette
     >>> plot_feature_importance(models, rescoring_features, save_path='importance.png')
-    
+
     >>> # Use a different palette
     >>> plot_feature_importance(models, rescoring_features, palette='flare', sort=True, error=True)
     """
@@ -91,9 +86,7 @@ def plot_feature_importance(
 
         average_feature_importance = np.mean(feature_importances, axis=0)
         std_feature_importance = np.std(feature_importances, axis=0)
-        feature_signs = np.mean(
-            [model.estimator.coef_.mean(axis=0) for model in models], axis=0
-        )
+        feature_signs = np.mean([model.estimator.coef_.mean(axis=0) for model in models], axis=0)
 
     elif model_type == "xgb":
         feature_importances = []
@@ -107,12 +100,8 @@ def plot_feature_importance(
         std_feature_importance = np.std(feature_importances, axis=0)
         feature_signs = np.ones_like(average_feature_importance)
 
-    logger.debug(
-        f"Total rescoring features: {len(sum(rescoring_features.values(), []))}"
-    )
-    logger.debug(
-        f"Average feature importance length: {len(average_feature_importance)}"
-    )
+    logger.debug(f"Total rescoring features: {len(sum(rescoring_features.values(), []))}")
+    logger.debug(f"Average feature importance length: {len(average_feature_importance)}")
     logger.debug(f"Features: {sum(rescoring_features.values(), [])}")
 
     # Extract plotting parameters
@@ -133,9 +122,7 @@ def plot_feature_importance(
     for source, features in rescoring_features.items():
         color = source_colors[source]  # 修改：使用预分配的颜色
         indices = [
-            i
-            for i, name in enumerate(sum(rescoring_features.values(), []))
-            if name in features
+            i for i, name in enumerate(sum(rescoring_features.values(), [])) if name in features
         ]
         source_importances = average_feature_importance[indices]
         source_std = std_feature_importance[indices]
@@ -167,9 +154,7 @@ def plot_feature_importance(
 
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     if error:
-        bars = ax.barh(
-            all_features, all_importances, xerr=all_errors, color=all_colors, capsize=5
-        )
+        bars = ax.barh(all_features, all_importances, xerr=all_errors, color=all_colors, capsize=5)
     else:
         bars = ax.barh(all_features, all_importances, color=all_colors)
 
@@ -211,46 +196,44 @@ def visualize_feature_correlation(psms: PsmContainer, save_path=None, **kwargs):
     **kwargs : dict
         Additional plotting parameters such as `figsize`, `dpi`, `height`, etc.
     """
-    rescoring_features = [
-        item for sublist in psms.rescoring_features.values() for item in sublist
-    ]
+    rescoring_features = [item for sublist in psms.rescoring_features.values() for item in sublist]
     n_features = len(rescoring_features)
 
     default_height = max(8, min(20, 8 + n_features * 0.15))
     height = kwargs.get("height", default_height)
     dpi = kwargs.get("dpi", 300)
-    
+
     corr = psms.psms[rescoring_features].corr()
     corr_mat = corr.stack().reset_index(name="correlation")
-    
+
     g = sns.relplot(
         data=corr_mat,
-        x="level_0", 
-        y="level_1", 
-        hue="correlation", 
+        x="level_0",
+        y="level_1",
+        hue="correlation",
         size="correlation",
-        palette="vlag",  
-        hue_norm=(-1, 1), 
+        palette="vlag",
+        hue_norm=(-1, 1),
         edgecolor=".7",
-        height=height, 
-        sizes=(50, 250), 
-        size_norm=(-.2, .8),
-        **{k: v for k, v in kwargs.items() if k not in ['height', 'dpi', 'figsize']}
+        height=height,
+        sizes=(50, 250),
+        size_norm=(-0.2, 0.8),
+        **{k: v for k, v in kwargs.items() if k not in ["height", "dpi", "figsize"]},
     )
-    
+
     g.set(xlabel="", ylabel="", aspect="equal")
     g.despine(left=True, bottom=True)
-    g.ax.margins(.02)
-    
+    g.ax.margins(0.02)
+
     for label in g.ax.get_xticklabels():
         label.set_rotation(90)
-    
+
     if n_features > 30:
         fontsize = max(6, 10 - n_features * 0.05)
         g.ax.tick_params(labelsize=fontsize)
-    
+
     g.figure.suptitle("Feature Correlation Matrix", y=1.01, fontsize=14)
     plt.tight_layout()
     g.figure.dpi = dpi
-    
+
     save_or_show_plot(save_path, logger)

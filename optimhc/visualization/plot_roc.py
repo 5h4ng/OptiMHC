@@ -1,7 +1,8 @@
-import os
-import matplotlib.pyplot as plt
-from optimhc.visualization.save_or_show_plot import save_or_show_plot
 import logging
+
+import matplotlib.pyplot as plt
+
+from optimhc.visualization.save_or_show_plot import save_or_show_plot
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ def plot_qvalues(
                 c=colors[i % len(colors)],
                 ax=ax,
                 threshold=threshold,
-                label=f"Result {i+1}" if len(results) > 1 else "Results",
+                label=f"Result {i + 1}" if len(results) > 1 else "Results",
                 linewidth=1,
                 **kwargs,
             )

@@ -1,10 +1,11 @@
 # utils.py
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from typing import List, Optional, Dict, Union
 from logging import getLogger
+from pathlib import Path
+from typing import List
+
+import numpy as np
+import pandas as pd
 
 logger = getLogger(__name__)
 
@@ -43,7 +44,7 @@ def convert_pfm_to_pwm(pfm_filename, pseudocount=0.8, background_freqs=None):
     pfm.drop(pfm.columns[-1], axis=1, inplace=True)  # Drop any extraneous columns
     pfm_pseudo = pfm + pseudocount
     ppm = pfm_pseudo.div(pfm_pseudo.sum(axis=0), axis=1)
-    
+
     # Handle both scalar and dictionary background frequencies
     if isinstance(background_freqs, dict):
         pwm = np.log2(ppm.div(list(background_freqs.values())))
@@ -82,18 +83,15 @@ def strip_flanking_and_charge(peptide: str) -> str:
     import re
 
     peptide = re.sub(r"^[^.]*\.|\.[^.]*$", "", peptide)
-    
+
     # Some PIN may have charge state at the end of the peptide, e.g., R.RRVEHHDHAVVSGR4.L
     # We should remove it to get the correct peptide sequence
     # Fragpipe: F.VTVQGRAIC[119.0041]SDPNNKRVKN4.A, remove charge state '4' in the peptide
-    
+
     if peptide and peptide[-1].isdigit():
         peptide = peptide[:-1]
-    
-    return peptide
-    
 
-    
+    return peptide
 
 
 def remove_modifications(peptide: str, keep_modification=None) -> str:
@@ -227,9 +225,7 @@ def extract_unimod_from_peptidoform(peptide: str, mod_dict: dict) -> tuple:
                 )
             mod_name = peptide[i + 1 : end]
             if mod_name not in mod_dict:
-                raise ValueError(
-                    f"Modification '{mod_name}' not found in the dictionary."
-                )
+                raise ValueError(f"Modification '{mod_name}' not found in the dictionary.")
             modifications.append(f"{current_position}|{mod_dict[mod_name]}")
             i = end + 1
         else:

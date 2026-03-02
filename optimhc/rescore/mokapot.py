@@ -2,13 +2,15 @@
 # A wrapper around mokapot for rescoring PSMs and converting to flashLFQ format
 
 import logging
-from typing import List, Dict
-import mokapot
-from mokapot import LinearPsmDataset
-from optimhc.psm_container import PsmContainer
-import pandas as pd
-from pathlib import Path
 import os
+from pathlib import Path
+from typing import List
+
+import mokapot
+import pandas as pd
+from mokapot import LinearPsmDataset
+
+from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)
 
@@ -93,9 +95,7 @@ def convert_to_mokapot_dataset(
     """
 
     # rescoring_features: Dict[str, List[str]] -> Tuple[str]
-    feature_columns = [
-        col for features in psms.rescoring_features.values() for col in features
-    ]
+    feature_columns = [col for features in psms.rescoring_features.values() for col in features]
 
     if rescoring_features is None:
         rescoring_features = feature_columns
@@ -120,8 +120,10 @@ def convert_to_mokapot_dataset(
 
     return dataset
 
+
 # Adapted from mokapot source code
 # https://github.com/wfondrie/mokapot
+
 
 def to_flashLFQ(results, output_dir, file_name):
     logger.info("Saving results in FlashLFQ format.")
@@ -170,9 +172,7 @@ def _format_flashlfq(conf):
     passing = peptides["mokapot q-value"] <= eval_fdr
 
     out_df = pd.DataFrame()
-    out_df["File Name"] = peptides.loc[passing, filename_column].apply(
-        lambda x: Path(x).name
-    )
+    out_df["File Name"] = peptides.loc[passing, filename_column].apply(lambda x: Path(x).name)
 
     seq = peptides.loc[passing, peptide_column]
     base_seq = (
@@ -189,9 +189,7 @@ def _format_flashlfq(conf):
 
     if isinstance(proteins, str):
         # TODO: Add delimiter sniffing.
-        prots = peptides.loc[passing, proteins].str.replace(
-            "\t", "; ", regex=False
-        )
+        prots = peptides.loc[passing, proteins].str.replace("\t", "; ", regex=False)
     elif proteins is None:
         prots = ""
     else:
@@ -204,8 +202,7 @@ def _format_flashlfq(conf):
     num_missing = missing.sum()
     if num_missing:
         logger.warning(
-            "- Discarding %i peptides that could not be mapped to protein "
-            "groups",
+            "- Discarding %i peptides that could not be mapped to protein groups",
             num_missing,
         )
         out_df = out_df.loc[~missing, :]

@@ -1,8 +1,9 @@
 # feature_generators/base_feature_generator.py
 
 from abc import ABC, abstractmethod
-import pandas as pd
 from typing import List
+
+import pandas as pd
 
 
 class BaseFeatureGenerator(ABC):
