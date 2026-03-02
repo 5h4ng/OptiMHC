@@ -1,7 +1,4 @@
-# Install deps with uv, run Ruff lint/format and pytest
-# https://docs.astral.sh/uv/guides/integration/github/
-
-name: Python application
+name: ruff and pytest
 
 on:
   push:
@@ -15,13 +12,17 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.9"
+          python-version: ${{ matrix.python-version }}
           enable-cache: true
 
       - name: Install dependencies

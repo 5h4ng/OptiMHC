@@ -11,7 +11,7 @@ authors = [
 ]
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "deeplc==3.1.1",
     "koinapy==0.0.10",
@@ -55,7 +55,7 @@ optimhc = ["PWMs*"]
 [tool.ruff]
 exclude = ["docs", "examples", "optimhc/gui/"]
 line-length = 99
-target-version = "py39"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
