@@ -52,3 +52,10 @@ include = ["optimhc*"]
 
 [tool.setuptools.package-data]
 optimhc = ["PWMs*"]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "pre-commit",
+]
