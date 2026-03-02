@@ -11,4 +11,4 @@ __all__ = [
     "feature_generator_form",
     "rescore_form",
     "modification_map"
-] 
+]

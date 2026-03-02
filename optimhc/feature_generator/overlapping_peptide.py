@@ -738,7 +738,7 @@ def assign_brother_aggregated_feature(
         except AttributeError:
             logger.error(f"Metadata for PSM {x} is not a dictionary.")
             return {}
-    
+
     def get_contig_sequence(x):
         try:
             return x.get('ContigSequence', None)
@@ -750,7 +750,7 @@ def assign_brother_aggregated_feature(
     contig_sequences = overlapping_data.apply(get_contig_sequence)
     print(overlapping_data)
     print(contig_sequences)
-    
+
     psms_df['ContigSequence'] = contig_sequences
 
     for feature in feature_columns:
@@ -759,18 +759,18 @@ def assign_brother_aggregated_feature(
 
     grouped_mean = psms_df.groupby('ContigSequence')[feature_columns].mean().reset_index()
     #grouped_sum = psms_df.groupby('ContigSequence')[feature_columns].sum().reset_index()
-    
+
     """
-    grouped = grouped_mean.merge(grouped_sum, 
-                                 on='ContigSequence', 
+    grouped = grouped_mean.merge(grouped_sum,
+                                 on='ContigSequence',
                                  suffixes=('_brother_mean', '_brother_sum'))
     """
-    psms_with_agg = psms_df.merge(grouped_mean, 
-                                 on='ContigSequence', 
+    psms_with_agg = psms_df.merge(grouped_mean,
+                                 on='ContigSequence',
                                  how='left',
                                  suffixes=('', '_brother_mean'))
-    
-    
+
+
     # use the original feature values if the aggregated values are missing
     for feature in feature_columns:
         mean_feature = feature + '_brother_mean'

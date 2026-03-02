@@ -13,7 +13,7 @@ from optimhc.gui.utils import load_config_from_yaml
 def config_file_uploader() -> Optional[Dict[str, Any]]:
     """
     Display a file uploader for configuration files.
-    
+
     Returns:
         Configuration dictionary if a file is uploaded, None otherwise
     """
@@ -22,7 +22,7 @@ def config_file_uploader() -> Optional[Dict[str, Any]]:
         type=["yaml", "yml"],
         help="Upload a YAML configuration file"
     )
-    
+
     if uploaded_file is not None:
         try:
             config = yaml.safe_load(uploaded_file)
@@ -31,19 +31,19 @@ def config_file_uploader() -> Optional[Dict[str, Any]]:
         except Exception as e:
             st.error(f"Error loading configuration file: {str(e)}")
             return None
-    
+
     return None
 
 
 def input_path_field(input_type: str, value: str = "", placeholder: str = "") -> str:
     """
     Display an input field for file paths.
-    
+
     Args:
         input_type: Type of input (pepxml, pin, mzML directory)
         value: Current value
         placeholder: Placeholder text
-        
+
     Returns:
         String containing file paths, one per line
     """
@@ -53,7 +53,7 @@ def input_path_field(input_type: str, value: str = "", placeholder: str = "") ->
         help_text = "Enter the full path to your mzML directory"
     else:
         help_text = "Enter file paths, one per line"
-    
+
     paths = st.text_area(
         f"{input_type} File Paths",
         value=value,
@@ -62,17 +62,17 @@ def input_path_field(input_type: str, value: str = "", placeholder: str = "") ->
         help=help_text,
         key=f"{input_type.lower()}_paths"
     )
-    
+
     return paths
 
 
 def yaml_example(example_type: str = "class_i") -> str:
     """
     Return an example YAML configuration by reading from example files.
-    
+
     Args:
         example_type: Type of example (class_i or class_ii)
-        
+
     Returns:
         Example YAML configuration as a string
     """
@@ -81,7 +81,7 @@ def yaml_example(example_type: str = "class_i") -> str:
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     )
     examples_dir = os.path.join(current_dir, "examples")
-    
+
     # Determine which example file to read
     if example_type.lower() == "class_i":
         example_file = os.path.join(examples_dir, "classI_example.yaml")
@@ -142,12 +142,12 @@ rescore:
   model: Percolator
   numJobs: 4
 """
-    
+
     try:
         if not os.path.exists(example_file):
             st.warning(f"Example file not found: {example_file}, using default configuration")
             return default_config
-            
+
         with open(example_file, 'r') as f:
             content = f.read()
             if not content:
@@ -156,4 +156,4 @@ rescore:
             return content
     except Exception as e:
         st.warning(f"Error reading example file: {str(e)}, using default configuration")
-        return default_config 
+        return default_config
