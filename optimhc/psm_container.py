@@ -107,6 +107,10 @@ class PsmContainer:
         check_column(charge_column)
         check_column(calculated_mass_column)
 
+        # ensure the label column is boolean
+        if psms[label_column].dtype != "bool":
+            raise ValueError(f"Column '{label_column}' must be boolean.")
+
         if psms[label_column].nunique() == 1 and psms[label_column].iloc[0]:
             raise ValueError("All PSMs are labeled as target. No decoy PSMs found.")
         elif psms[label_column].nunique() == 1 and not psms[label_column].iloc[0]:
