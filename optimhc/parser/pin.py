@@ -1,8 +1,10 @@
 import logging
-from typing import List, Optional, Tuple, Union
-import pandas as pd
-from optimhc.psm_container import PsmContainer
 import re
+from typing import List, Optional, Tuple, Union
+
+import pandas as pd
+
+from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +57,7 @@ def read_pin(
         col_lower = col.lower()
         column_map = {c.lower(): c for c in columns}
         if col_lower not in column_map:
-            raise ValueError(
-                f"Column '{col}' not found in PSM data (case-insensitive)."
-            )
+            raise ValueError(f"Column '{col}' not found in PSM data (case-insensitive).")
         return column_map[col_lower]
 
     # non-feature columns (case-insensitive search)
@@ -98,19 +98,24 @@ def read_pin(
         if retention_time_column
         else None
     )
-    
+
     # col: charge_[1,2,3,...] = 0, 1
-    charge_map = {col: int(re.search(r'(\d+)', col).group(1))
-                for col in pin_df.columns if re.search(r'charge[_]?(\d+)', col, re.IGNORECASE)}
+    charge_map = {
+        col: int(re.search(r"(\d+)", col).group(1))
+        for col in pin_df.columns
+        if re.search(r"charge[_]?(\d+)", col, re.IGNORECASE)
+    }
+
     def extract_charge(row):
         for col, num in charge_map.items():
             if int(float(row[col])) == 1:
                 return num
         return None
-    pin_df['Charge'] = pin_df.apply(extract_charge, axis=1)
-    
+
+    pin_df["Charge"] = pin_df.apply(extract_charge, axis=1)
+
     # feature columns: columns that are not non-feature columns
-    non_feature_columns = [label, scan, specid, peptide, protein, hit_rank, 'Charge']
+    non_feature_columns = [label, scan, specid, peptide, protein, hit_rank, "Charge"]
     feature_columns = [col for col in pin_df.columns if col not in non_feature_columns]
 
     logger.info(
@@ -124,7 +129,7 @@ def read_pin(
     pin_df[peptide] = pin_df[peptide].astype(str)
     pin_df[protein] = pin_df[protein].astype(str)
     pin_df[hit_rank] = pin_df[hit_rank].astype(float).astype(int)
-    pin_df['Charge'] = pin_df['Charge'].astype(float).astype(int)
+    pin_df["Charge"] = pin_df["Charge"].astype(float).astype(int)
     if retention_time_column:
         pin_df[retention_time_column] = pin_df[retention_time_column].astype(float)
     for col in feature_columns:
@@ -142,7 +147,7 @@ def read_pin(
         ms_data_file_column=None,
         peptide_column=peptide,
         protein_column=protein,
-        charge_column='Charge',
+        charge_column="Charge",
         rescoring_features=rescoring_features,
         hit_rank_column=hit_rank,
         retention_time_column=retention_time_column,

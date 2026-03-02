@@ -1,9 +1,11 @@
-import logging
-import pandas as pd
 import itertools
-import numpy as np
+import logging
 from functools import partial
+
+import numpy as np
+import pandas as pd
 from lxml import etree
+
 from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)
@@ -85,7 +87,7 @@ def read_pepxml(pepxml_files, decoy_prefix="DECOY_"):
         "scan",
         "spectrum",
         "label",
-        "calc_mass", # Retain calc_mass for FlashLFQ compatibility
+        "calc_mass",  # Retain calc_mass for FlashLFQ compatibility
         "peptide",
         "proteins",
         "charge",
@@ -271,7 +273,7 @@ def _parse_psm(psm_info, spec_info, decoy_prefix):
         "{*}search_score",
         "{*}alternative_protein",
     ]
-    
+
     # TODO: Directly read modification_info
     # TODO: The current code can not parse the n-terminal modification
     for element in psm_info.iter(*queries):

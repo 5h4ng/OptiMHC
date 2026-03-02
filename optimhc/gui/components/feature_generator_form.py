@@ -8,25 +8,25 @@ from typing import Dict, Any, List
 def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """
     Create a form for configuring feature generators.
-    
+
     Args:
         existing_generators: List of existing feature generator configurations
-        
+
     Returns:
         List of feature generator configurations
     """
     if existing_generators is None:
         existing_generators = []
-    
+
     # Convert existing generators to a dict for easier lookup
     existing_gen_dict = {}
     for gen in existing_generators:
         existing_gen_dict[gen["name"]] = gen.get("params", {})
-    
+
     feature_generators = []
-    
+
     st.subheader("Feature Generators")
-    
+
     # Determine the MHC class from existing configuration
     # Look for PWM first as it has explicit class parameter
     mhc_class = None
@@ -34,14 +34,14 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
         if gen["name"] == "PWM" and "params" in gen and "class" in gen["params"]:
             mhc_class = gen["params"]["class"]
             break
-    
+
     # If PWM not found, infer from presence of NetMHCIIpan
     if mhc_class is None:
         if any(gen["name"] == "NetMHCIIpan" for gen in existing_generators):
             mhc_class = "II"
         else:
             mhc_class = "I"  # Default to class I
-    
+
     # MHC class selection
     mhc_class = st.radio(
         "MHC Class",
@@ -50,41 +50,41 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
         horizontal=True,
         help="Select MHC class for appropriate feature generators."
     )
-    
+
     st.markdown("---")
     st.markdown("Select which feature generators to use in the pipeline:")
-    
+
     # Basic feature generator (always available)
     if st.checkbox("Basic", value="Basic" in existing_gen_dict or not existing_generators, key="basic_gen"):
         feature_generators.append({"name": "Basic"})
-    
+
     # PWM feature generator (class parameter set automatically based on MHC class selection)
     if st.checkbox("PWM", value="PWM" in existing_gen_dict, key="pwm_gen"):
         feature_generators.append({
-            "name": "PWM", 
+            "name": "PWM",
             "params": {"class": mhc_class}
         })
-    
+
     # Class I specific generators
     if mhc_class == "I":
         # MHCflurry (class I only)
         if st.checkbox("MHCflurry", value="MHCflurry" in existing_gen_dict, key="mhcflurry_gen"):
             feature_generators.append({"name": "MHCflurry"})
-        
+
         # NetMHCpan (class I only)
         if st.checkbox("NetMHCpan", value="NetMHCpan" in existing_gen_dict, key="netmhcpan_gen"):
             feature_generators.append({"name": "NetMHCpan"})
-    
+
     # Class II specific generators
     else:  # mhc_class == "II"
         # NetMHCIIpan (class II only)
         if st.checkbox("NetMHCIIpan", value="NetMHCIIpan" in existing_gen_dict, key="netmhciipan_gen"):
             feature_generators.append({"name": "NetMHCIIpan"})
-    
+
     # DeepLC feature generator (available for both classes)
     if st.checkbox("DeepLC", value="DeepLC" in existing_gen_dict, key="deeplc_gen"):
         deeplc_params = {}
-        
+
         col1, col2 = st.columns(2)
         with col1:
             calibration_criteria = st.text_input(
@@ -94,7 +94,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
                 help="Criteria for calibration (e.g., expect, xcorr, hyperscore)"
             )
             deeplc_params["calibrationCriteria"] = calibration_criteria
-        
+
         with col2:
             lower_is_better = st.checkbox(
                 "Lower Is Better",
@@ -103,7 +103,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
                 help="Whether lower values of the calibration criteria are better (True for expect, False for xcorr/hyperscore)"
             )
             deeplc_params["lowerIsBetter"] = lower_is_better
-        
+
         calibration_size = st.slider(
             "Calibration Size",
             min_value=0.05,
@@ -114,15 +114,15 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
             help="Fraction of PSMs to use for calibration (0.05-0.5)"
         )
         deeplc_params["calibrationSize"] = calibration_size
-        
+
         feature_generators.append({"name": "DeepLC", "params": deeplc_params})
-    
+
     # SpectralSimilarity feature generator (with AlphaPeptDeep as default)
     if st.checkbox("SpectralSimilarity", value="SpectralSimilarity" in existing_gen_dict or not existing_generators, key="spectra_similarity_gen"):
         ss_params = {}
-        
+
         st.markdown("#### SpectralSimilarity Settings")
-        
+
         model = st.selectbox(
             "Model",
             options=["AlphaPeptDeep_ms2_generic"],
@@ -133,7 +133,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
             help="Prediction model for theoretical spectra"
         )
         ss_params["model"] = model
-        
+
         instrument = st.selectbox(
             "Instrument",
             options=["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"],
@@ -144,7 +144,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
             help="Available instruments: QE, LUMOS, TIMSTOF, SCIEXTOF"
         )
         ss_params["instrument"] = instrument
-        
+
         # mzML directory path
         mzml_dir = st.text_input(
             "mzML Directory Path",
@@ -154,7 +154,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
         )
         if mzml_dir:
             ss_params["mzmlDir"] = mzml_dir
-        
+
         # Spectrum ID pattern
         spectrum_id_pattern = st.text_input(
             "Spectrum ID Pattern",
@@ -164,7 +164,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
         )
         if spectrum_id_pattern:
             ss_params["spectrumIdPattern"] = spectrum_id_pattern
-        
+
         collision_energy = st.number_input(
             "Collision Energy",
             min_value=20,
@@ -174,7 +174,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
             help="Collision energy used during acquisition (typical range: 25-30)"
         )
         ss_params["collisionEnergy"] = collision_energy
-        
+
         tolerance = st.slider(
             "Tolerance (ppm)",
             min_value=10,
@@ -185,7 +185,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
             help="Mass tolerance in ppm for peak matching (10-50 ppm)"
         )
         ss_params["tolerance"] = tolerance
-        
+
         num_top_peaks = st.slider(
             "Number of Top Peaks",
             min_value=10,
@@ -196,7 +196,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
             help="Number of most intense peaks to consider for matching"
         )
         ss_params["numTopPeaks"] = num_top_peaks
-        
+
         url = st.text_input(
             "API URL",
             value=existing_gen_dict.get("SpectralSimilarity", {}).get("url", "koina.wilhelmlab.org:443"),
@@ -205,15 +205,15 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
         )
         if url:
             ss_params["url"] = url
-        
+
         feature_generators.append({"name": "SpectralSimilarity", "params": ss_params})
-    
+
     # OverlappingPeptide feature generator
     if st.checkbox("OverlappingPeptide", value="OverlappingPeptide" in existing_gen_dict, key="overlapping_peptide_gen"):
         op_params = {}
-        
+
         st.markdown("#### OverlappingPeptide Settings")
-        
+
         col1, col2 = st.columns(2)
         with col1:
             min_overlap_length = st.number_input(
@@ -225,7 +225,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
                 help="Minimum number of amino acids that must overlap"
             )
             op_params["minOverlapLength"] = min_overlap_length
-        
+
         with col2:
             overlapping_score = st.text_input(
                 "Overlapping Score",
@@ -234,7 +234,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
                 help="Score to use for overlapping peptides (e.g., expect, xcorr, hyperscore)"
             )
             op_params["overlappingScore"] = overlapping_score
-        
+
         col1, col2 = st.columns(2)
         with col1:
             min_length = st.number_input(
@@ -246,7 +246,7 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
                 help="Minimum peptide length to consider"
             )
             op_params["minLength"] = min_length
-        
+
         with col2:
             max_length = st.number_input(
                 "Max Length",
@@ -257,11 +257,11 @@ def feature_generator_form(existing_generators: List[Dict[str, Any]] = None) -> 
                 help="Maximum peptide length to consider"
             )
             op_params["maxLength"] = max_length
-        
+
         feature_generators.append({"name": "OverlappingPeptide", "params": op_params})
-    
+
     # Warning if no generators selected
     if not feature_generators:
         st.warning("Please select at least one feature generator.")
-    
-    return feature_generators 
+
+    return feature_generators

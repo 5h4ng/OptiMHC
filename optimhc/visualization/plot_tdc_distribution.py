@@ -1,16 +1,15 @@
+import logging
+
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
-import logging
+
 from optimhc.psm_container import PsmContainer
 from optimhc.visualization.save_or_show_plot import save_or_show_plot
 
 logger = logging.getLogger(__name__)
 
 
-def visualize_target_decoy_features(
-    psms: PsmContainer, num_cols=5, save_path=None, **kwargs
-):
+def visualize_target_decoy_features(psms: PsmContainer, num_cols=5, save_path=None, **kwargs):
     """
     Visualize the distribution of features in a DataFrame using kernel density estimation plots.
 
@@ -43,9 +42,7 @@ def visualize_target_decoy_features(
 
     # drop features that only have one value
     rescoring_features = [
-        feature
-        for feature in rescoring_features
-        if len(psms.psms[feature].unique()) > 1
+        feature for feature in rescoring_features if len(psms.psms[feature].unique()) > 1
     ]
 
     num_features = len(rescoring_features)
@@ -58,8 +55,8 @@ def visualize_target_decoy_features(
     axes = axes.flatten()
 
     psms_top_hits = psms.psms[psms.psms[psms.hit_rank_column] == 1].copy()
-    num_true_hits = len(psms_top_hits[psms_top_hits[psms.label_column] == True])
-    num_decoys = len(psms_top_hits[psms_top_hits[psms.label_column] == False])
+    num_true_hits = len(psms_top_hits[psms_top_hits[psms.label_column]])
+    num_decoys = len(psms_top_hits[~psms_top_hits[psms.label_column]])
     logger.debug(f"Number of true hits: {num_true_hits}")
     logger.debug(f"Number of decoys: {num_decoys}")
     psms_top_hits[psms.label_column] = psms_top_hits[psms.label_column].map(

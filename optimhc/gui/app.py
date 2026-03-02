@@ -25,39 +25,39 @@ def main():
     """
     # Set up page config
     set_page_config()
-    
+
     # Apply custom CSS
     apply_custom_css()
-    
+
     # Initialize session state for navigation
     if "page" not in st.session_state:
         st.session_state.page = "home"
-    
+
     # Sidebar navigation
     st.sidebar.title("Navigation")
-    
+
     # Navigation buttons
     if st.sidebar.button("Home", use_container_width=True):
         st.session_state.page = "home"
         st.rerun()
-    
+
     if st.sidebar.button("Configure", use_container_width=True):
         st.session_state.page = "configure"
         st.rerun()
-    
+
     if st.sidebar.button("Run Pipeline", use_container_width=True):
         st.session_state.page = "run"
         st.rerun()
-    
+
     if st.sidebar.button("Results", use_container_width=True):
         st.session_state.page = "results"
         st.rerun()
-    
+
     # Version info in sidebar
     st.sidebar.markdown("---")
     from optimhc import __version__
     st.sidebar.info(f"optiMHC v{__version__}")
-    
+
     # Render the selected page
     if st.session_state.page == "home":
         home.render()
@@ -67,10 +67,10 @@ def main():
         run.render()
     elif st.session_state.page == "results":
         results.render()
-    
+
     # Footer
     footer()
 
 
 if __name__ == "__main__":
-    main() 
+    main()

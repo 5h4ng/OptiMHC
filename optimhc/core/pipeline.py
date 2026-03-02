@@ -5,27 +5,29 @@ Implements the main optiMHC pipeline for immunopeptidomics rescoring, including 
 feature generation, rescoring, result saving, and visualization. Supports both single-run and
 experiment modes.
 """
-import os
-import logging
+
 import gc
-import pandas as pd
+import logging
+import os
 from multiprocessing import Process
+
 from mokapot.model import PercolatorModel
 
-from optimhc.parser import read_pin, read_pepxml
+from optimhc.core.config import Config
+from optimhc.core.feature_generation import generate_features
+from optimhc.core.logging_helper import setup_loggers
+from optimhc.parser import read_pepxml, read_pin
 from optimhc.rescore import mokapot
-from optimhc.rescore.model import XGBoostPercolatorModel, RandomForestPercolatorModel
+from optimhc.rescore.model import RandomForestPercolatorModel, XGBoostPercolatorModel
 from optimhc.visualization import (
     plot_feature_importance,
-    visualize_target_decoy_features,
-    visualize_feature_correlation,
     plot_qvalues,
+    visualize_feature_correlation,
+    visualize_target_decoy_features,
 )
-from optimhc.core.config import load_config, Config
-from optimhc.core.logging_helper import setup_loggers
-from optimhc.core.feature_generation import generate_features
 
 logger = logging.getLogger(__name__)
+
 
 # TODO: fix the type hinting for mokapot results
 class Pipeline:
@@ -46,6 +48,7 @@ class Pipeline:
     >>> pipeline = Pipeline(config)
     >>> pipeline.run()
     """
+
     def __init__(self, config):
         """
         Initialize the pipeline with a configuration file, dict, or Config object.
@@ -98,7 +101,10 @@ class Pipeline:
             if input_type == "pepxml":
                 psms = read_pepxml(input_files, decoy_prefix=self.config["decoyPrefix"])
             elif input_type == "pin":
-                psms = read_pin(input_files, retention_time_column=self.config.get("retentionTimeColumn"))
+                psms = read_pin(
+                    input_files,
+                    retention_time_column=self.config.get("retentionTimeColumn"),
+                )
             else:
                 raise ValueError(f"Unsupported input type: {input_type}")
             return psms
@@ -168,9 +174,7 @@ class Pipeline:
         if rescoring_features is not None:
             kwargs["rescoring_features"] = rescoring_features
 
-        results, models = mokapot.rescore(
-            psms, model=model, test_fdr=test_fdr, **kwargs
-        )
+        results, models = mokapot.rescore(psms, model=model, test_fdr=test_fdr, **kwargs)
         return results, models
 
     def save_results(self, psms, results, models, output_dir=None, file_root="optimhc"):
@@ -201,7 +205,7 @@ class Pipeline:
             logger.info(f"Saving models to {model_dir}")
             for i, model in enumerate(models):
                 model.save(os.path.join(model_dir, f"{file_root}.model{i}"))
-        
+
         if self.to_flashlfq:
             mokapot.to_flashLFQ(results, output_dir, file_name=f"{file_root}.FlashLFQ.txt")
 
@@ -237,9 +241,7 @@ class Pipeline:
         )
 
         if sources:
-            rescoring_features = {
-                k: v for k, v in psms.rescoring_features.items() if k in sources
-            }
+            rescoring_features = {k: v for k, v in psms.rescoring_features.items() if k in sources}
         else:
             rescoring_features = psms.rescoring_features
 
@@ -305,9 +307,7 @@ class Pipeline:
                 rescoring_features=features,
             )
 
-            self.save_results(
-                psms, results, models, output_dir=exp_dir, file_root=exp_name
-            )
+            self.save_results(psms, results, models, output_dir=exp_dir, file_root=exp_name)
 
             fig_dir = os.path.join(exp_dir, "figures")
 

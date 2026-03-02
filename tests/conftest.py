@@ -1,10 +1,8 @@
-import pytest
-import pandas as pd
-import numpy as np
 import tempfile
-import shutil
-import os
 from pathlib import Path
+
+import pandas as pd
+import pytest
 
 
 @pytest.fixture
@@ -28,65 +26,86 @@ def sample_mzml_files(temp_dir):
 @pytest.fixture
 def minimal_psm_data():
     """Create minimal PSM data for basic tests"""
-    return pd.DataFrame({
-        'scan_id': [1, 2, 3, 4],
-        'spectrum_id': ['spec_1', 'spec_2', 'spec_3', 'spec_4'],
-        'peptide': ['PEPTIDE1', 'PEPTIDE2', 'PEPTIDE3', 'DECOY_PEPTIDE1'],
-        'protein': ['PROT1', 'PROT2', 'PROT3', 'DECOY_PROT1'],
-        'label': [True, True, True, False],
-        'ms_file': ['file1.mzML', 'file1.mzML', 'file2.mzML', 'file1.mzML'],
-        'feature1': [0.1, 0.2, 0.3, 0.4],
-        'feature2': [1.1, 1.2, 1.3, 1.4]
-    })
+    return pd.DataFrame(
+        {
+            "scan_id": [1, 2, 3, 4],
+            "spectrum_id": ["spec_1", "spec_2", "spec_3", "spec_4"],
+            "peptide": ["PEPTIDE1", "PEPTIDE2", "PEPTIDE3", "DECOY_PEPTIDE1"],
+            "protein": ["PROT1", "PROT2", "PROT3", "DECOY_PROT1"],
+            "label": [True, True, True, False],
+            "ms_file": ["file1.mzML", "file1.mzML", "file2.mzML", "file1.mzML"],
+            "feature1": [0.1, 0.2, 0.3, 0.4],
+            "feature2": [1.1, 1.2, 1.3, 1.4],
+        }
+    )
 
 
 @pytest.fixture
 def complex_psm_data():
     """Create complex PSM data with additional columns for advanced tests"""
-    return pd.DataFrame({
-        'scan_id': [1, 2, 3, 4, 5, 6],
-        'spectrum_id': ['spec_1', 'spec_2', 'spec_3', 'spec_4', 'spec_5', 'spec_6'],
-        'peptide': ['PEPTIDE1', 'PEPTIDE2', 'PEPTIDE3', 'DECOY_PEPTIDE1', 'DECOY_PEPTIDE2', 'PEPTIDE4'],
-        'protein': ['PROT1', 'PROT2', 'PROT3', 'DECOY_PROT1', 'DECOY_PROT2', 'PROT4'],
-        'label': [True, True, True, False, False, True],
-        'ms_file': ['file1.mzML', 'file1.mzML', 'file2.mzML', 'file1.mzML', 'file2.mzML', 'file2.mzML'],
-        'charge': [2, 3, 2, 2, 3, 2],
-        'hit_rank': [1, 1, 2, 1, 1, 1],
-        'feature1': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
-        'feature2': [1.1, 1.2, 1.3, 1.4, 1.5, 1.6]
-    })
+    return pd.DataFrame(
+        {
+            "scan_id": [1, 2, 3, 4, 5, 6],
+            "spectrum_id": ["spec_1", "spec_2", "spec_3", "spec_4", "spec_5", "spec_6"],
+            "peptide": [
+                "PEPTIDE1",
+                "PEPTIDE2",
+                "PEPTIDE3",
+                "DECOY_PEPTIDE1",
+                "DECOY_PEPTIDE2",
+                "PEPTIDE4",
+            ],
+            "protein": [
+                "PROT1",
+                "PROT2",
+                "PROT3",
+                "DECOY_PROT1",
+                "DECOY_PROT2",
+                "PROT4",
+            ],
+            "label": [True, True, True, False, False, True],
+            "ms_file": [
+                "file1.mzML",
+                "file1.mzML",
+                "file2.mzML",
+                "file1.mzML",
+                "file2.mzML",
+                "file2.mzML",
+            ],
+            "charge": [2, 3, 2, 2, 3, 2],
+            "hit_rank": [1, 1, 2, 1, 1, 1],
+            "feature1": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+            "feature2": [1.1, 1.2, 1.3, 1.4, 1.5, 1.6],
+        }
+    )
 
 
 @pytest.fixture
 def basic_rescoring_features():
     """Basic rescoring feature configuration"""
-    return {
-        'basic': ['feature1', 'feature2']
-    }
+    return {"basic": ["feature1", "feature2"]}
 
 
 @pytest.fixture
 def complex_rescoring_features():
     """Complex rescoring feature configuration"""
-    return {
-        'basic': ['feature1', 'feature2'],
-        'advanced': ['feature3']
-    }
+    return {"basic": ["feature1", "feature2"], "advanced": ["feature3"]}
 
 
 @pytest.fixture
 def psm_container(minimal_psm_data, basic_rescoring_features):
     """Create a basic PsmContainer instance for testing"""
     from optimhc.psm_container import PsmContainer
+
     return PsmContainer(
         psms=minimal_psm_data,
-        label_column='label',
-        scan_column='scan_id',
-        spectrum_column='spectrum_id',
-        ms_data_file_column='ms_file',
-        peptide_column='peptide',
-        protein_column='protein',
-        rescoring_features=basic_rescoring_features
+        label_column="label",
+        scan_column="scan_id",
+        spectrum_column="spectrum_id",
+        ms_data_file_column="ms_file",
+        peptide_column="peptide",
+        protein_column="protein",
+        rescoring_features=basic_rescoring_features,
     )
 
 
@@ -94,17 +113,18 @@ def psm_container(minimal_psm_data, basic_rescoring_features):
 def complex_psm_container(complex_psm_data, basic_rescoring_features):
     """Create a complex PsmContainer instance with additional columns"""
     from optimhc.psm_container import PsmContainer
+
     return PsmContainer(
         psms=complex_psm_data,
-        label_column='label',
-        scan_column='scan_id',
-        spectrum_column='spectrum_id',
-        ms_data_file_column='ms_file',
-        peptide_column='peptide',
-        protein_column='protein',
+        label_column="label",
+        scan_column="scan_id",
+        spectrum_column="spectrum_id",
+        ms_data_file_column="ms_file",
+        peptide_column="peptide",
+        protein_column="protein",
         rescoring_features=basic_rescoring_features,
-        hit_rank_column='hit_rank',
-        charge_column='charge'
+        hit_rank_column="hit_rank",
+        charge_column="charge",
     )
 
 

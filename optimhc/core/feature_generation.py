@@ -4,16 +4,18 @@ feature_generation.py
 Implements feature generation logic for optiMHC, supporting multiple feature generators
 (Basic, OverlappingPeptide, PWM, MHCflurry, NetMHCpan, NetMHCIIpan, DeepLC, SpectralSimilarity, etc.).
 """
-import os
-import logging
-import re
-import gc
 
-# The reason why we need to import the feature generators here is that 
+import gc
+import logging
+import os
+import re
+
+from optimhc.feature_generator.netMHCIIpan import NetMHCIIpanFeatureGenerator
+
+# The reason why we need to import the feature generators here is that
 # the package 'mhctools' affect the logging configuration of optiMHC.
 # TODO: find a better way to handle this.
 from optimhc.feature_generator.netMHCpan import NetMHCpanFeatureGenerator
-from optimhc.feature_generator.netMHCIIpan import NetMHCIIpanFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,7 @@ logger = logging.getLogger(__name__)
 # TODO: refactor the code to pass config as a parameter to the generators
 # TODO: factory method for feature generators
 # TODO: for allele-specific generators, we need to test the validation of the allele input first
+
 
 def generate_features(psms, config):
     """
@@ -46,7 +49,6 @@ def generate_features(psms, config):
     remove_pre_nxt_aa = config["removePreNxtAA"]
     n_processes = config["numProcesses"]
     show_progress = config["showProgress"]
-    output_dir = config["outputDir"]
     mod_dict = config.get("modificationMap", None)
     if mod_dict == {}:
         mod_dict = None
@@ -57,9 +59,7 @@ def generate_features(psms, config):
     if feature_generators is not None:
         for generator_config in feature_generators:
             if not isinstance(generator_config, dict):
-                logger.warning(
-                    "Feature generator config is not a dictionary, skipping..."
-                )
+                logger.warning("Feature generator config is not a dictionary, skipping...")
                 continue
 
             generator_type = generator_config.get("name")
@@ -71,6 +71,7 @@ def generate_features(psms, config):
                     OverlappingPeptideFeatureGenerator,
                     assign_brother_aggregated_feature,
                 )
+
                 overlapping_peptide = OverlappingPeptideFeatureGenerator(
                     unique_peptides,
                     min_overlap_length=generator_params.get("minOverlapLength", 8),
@@ -108,6 +109,7 @@ def generate_features(psms, config):
 
             elif generator_type == "Basic":
                 from optimhc.feature_generator.basic import BasicFeatureGenerator
+
                 basic_generator = BasicFeatureGenerator(
                     psms.psms[psms.peptide_column].tolist(),
                     remove_pre_nxt_aa=remove_pre_nxt_aa,
@@ -123,6 +125,7 @@ def generate_features(psms, config):
 
             elif generator_type == "PWM":
                 from optimhc.feature_generator.PWM import PWMFeatureGenerator
+
                 pwm_generator = PWMFeatureGenerator(
                     unique_peptides,
                     alleles=allele,
@@ -142,7 +145,10 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "MHCflurry":
-                from optimhc.feature_generator.mhcflurry import MHCflurryFeatureGenerator
+                from optimhc.feature_generator.mhcflurry import (
+                    MHCflurryFeatureGenerator,
+                )
+
                 mhcflurry_generator = MHCflurryFeatureGenerator(
                     unique_peptides,
                     alleles=allele,
@@ -161,7 +167,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "NetMHCpan":
-                #from optimhc.feature_generator.netMHCpan import NetMHCpanFeatureGenerator
+                # from optimhc.feature_generator.netMHCpan import NetMHCpanFeatureGenerator
                 netmhcpan_generator = NetMHCpanFeatureGenerator(
                     unique_peptides,
                     alleles=allele,
@@ -183,7 +189,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "NetMHCIIpan":
-                #from optimhc.feature_generator.netMHCIIpan import NetMHCIIpanFeatureGenerator
+                # from optimhc.feature_generator.netMHCIIpan import NetMHCIIpanFeatureGenerator
                 netmhciipan_generator = NetMHCIIpanFeatureGenerator(
                     unique_peptides,
                     alleles=allele,
@@ -206,16 +212,15 @@ def generate_features(psms, config):
 
             elif generator_type == "DeepLC":
                 from optimhc.feature_generator.DeepLC import DeepLCFeatureGenerator
+
                 deeplc_generator = DeepLCFeatureGenerator(
                     psms,
-                    calibration_criteria_column=generator_params.get(
-                        "calibrationCriteria"
-                    ),
+                    calibration_criteria_column=generator_params.get("calibrationCriteria"),
                     lower_score_is_better=generator_params.get("lowerIsBetter"),
                     calibration_set_size=generator_params.get("calibrationSize", 0.1),
-                    processes=n_processes, 
+                    processes=n_processes,
                     # TODO: Check here carefully
-                    # Since DeepLC is GPU-based, 
+                    # Since DeepLC is GPU-based,
                     # the processes here is not the same meaning as the n_processes in multi-threading
                     model_path=generator_params.get("model_path", None),
                     remove_pre_nxt_aa=remove_pre_nxt_aa,
@@ -230,7 +235,10 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "SpectralSimilarity":
-                from optimhc.feature_generator.spectral_similarity import SpectralSimilarityFeatureGenerator
+                from optimhc.feature_generator.spectral_similarity import (
+                    SpectralSimilarityFeatureGenerator,
+                )
+
                 # Match PSMs with the spectra
                 mzML_dir = generator_params.get("mzmlDir", None)
                 if mzML_dir is None:
@@ -261,9 +269,7 @@ def generate_features(psms, config):
                         )
 
                         for ms_data_file in psms.psms[psms.ms_data_file_column]:
-                            mz_file_basename = os.path.basename(ms_data_file).split(
-                                "."
-                            )[0]
+                            mz_file_basename = os.path.basename(ms_data_file).split(".")[0]
                             if mz_file_basename.endswith(".mzML"):
                                 mz_file_basename = mz_file_basename[:-5]
                             elif mz_file_basename.endswith("mzML"):
@@ -282,8 +288,7 @@ def generate_features(psms, config):
                             )
 
                 mz_file_paths = [
-                    os.path.join(mzML_dir, f"{mz_file}.mzML")
-                    for mz_file in mz_file_names
+                    os.path.join(mzML_dir, f"{mz_file}.mzML") for mz_file in mz_file_names
                 ]
                 mz_file_paths_set = set(mz_file_paths)
                 logger.info(f"mz_file_paths: {mz_file_paths_set}")
@@ -313,17 +318,11 @@ def generate_features(psms, config):
                     mz_file_paths=mz_file_paths,
                     model_type=generator_params.get("model"),
                     collision_energies=(
-                        [collision_energy] * len(psms.peptides)
-                        if collision_energy
-                        else None
+                        [collision_energy] * len(psms.peptides) if collision_energy else None
                     ),
-                    instruments=(
-                        [instrument] * len(psms.peptides) if instrument else None
-                    ),
+                    instruments=([instrument] * len(psms.peptides) if instrument else None),
                     fragmentation_types=(
-                        [fragmentation_type] * len(psms.peptides)
-                        if fragmentation_type
-                        else None
+                        [fragmentation_type] * len(psms.peptides) if fragmentation_type else None
                     ),
                     remove_pre_nxt_aa=remove_pre_nxt_aa,
                     mod_dict=mod_dict,
@@ -332,9 +331,7 @@ def generate_features(psms, config):
                     tolerance_ppm=generator_params.get("tolerance", 20),
                 )
 
-                spectral_similarity_features = (
-                    spectral_similarity_generator.generate_features()
-                )
+                spectral_similarity_features = spectral_similarity_generator.generate_features()
                 psms.add_features(
                     spectral_similarity_features,
                     psms_key=[

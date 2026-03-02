@@ -2,13 +2,15 @@
 # TODO: Use koina for prediction
 
 import logging
-from deeplc import DeepLC
-from optimhc.psm_container import PsmContainer
-from typing import List, Union, Optional, Dict
-from optimhc import utils
-import pandas as pd
+from typing import Dict, List, Optional, Union
+
 import numpy as np
+import pandas as pd
+from deeplc import DeepLC
+
+from optimhc import utils
 from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)
 logging.getLogger("deeplc.feat_extractor").setLevel(logging.CRITICAL)
@@ -196,24 +198,18 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         df_deeplc["label"] = df_psm[self.psms.label_column]
 
         if self.remove_pre_nxt_aa:
-            df_deeplc["seq"] = df_deeplc["original_seq"].apply(
-                utils.strip_flanking_and_charge
-            )
+            df_deeplc["seq"] = df_deeplc["original_seq"].apply(utils.strip_flanking_and_charge)
         else:
             df_deeplc["seq"] = df_deeplc["original_seq"]
 
         # Apply extract_unimod_from_peptidoform once and store both results.
         if self.mod_dict is None:
             logger.warning("No mod_dict provided. Removing modifications.")
-            df_deeplc["seq"] = df_deeplc["seq"].apply(
-                lambda x: utils.remove_modifications(x)
-            )
+            df_deeplc["seq"] = df_deeplc["seq"].apply(lambda x: utils.remove_modifications(x))
             df_deeplc["modifications"] = ""
         else:
             extracted_results = df_deeplc["seq"].apply(
-                lambda x: utils.extract_unimod_from_peptidoform(
-                    x, mod_dict=self.mod_dict
-                )
+                lambda x: utils.extract_unimod_from_peptidoform(x, mod_dict=self.mod_dict)
             )
             df_deeplc["seq"] = extracted_results.apply(lambda x: x[0])
             df_deeplc["modifications"] = extracted_results.apply(lambda x: x[1])
@@ -289,20 +285,14 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         result_df = pd.DataFrame()
         result_df["original_seq"] = self.deeplc_df["original_seq"]
         result_df["observed_retention_time"] = self.deeplc_df["tr"]
-        result_df["predicted_retention_time"] = self.deeplc_df[
-            "predicted_retention_time"
-        ]
+        result_df["predicted_retention_time"] = self.deeplc_df["predicted_retention_time"]
         result_df["retention_time_diff"] = self.deeplc_df["retention_time_diff"]
-        result_df["abs_retention_time_diff"] = self.deeplc_df[
-            "retention_time_diff"
-        ].abs()
+        result_df["abs_retention_time_diff"] = self.deeplc_df["retention_time_diff"].abs()
 
         # Adopt from 'DeepRescore2': RTR = min(pred, obs) / max(pred, obs)
         result_df["retention_time_ratio"] = np.minimum(
             result_df["predicted_retention_time"], result_df["observed_retention_time"]
-        ) / np.maximum(
-            result_df["predicted_retention_time"], result_df["observed_retention_time"]
-        )
+        ) / np.maximum(result_df["predicted_retention_time"], result_df["observed_retention_time"])
 
         for col in self.feature_columns:
             nan_rows = result_df[result_df[col].isna()]
@@ -347,9 +337,7 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         logger.debug("Selecting PSMs for calibration.")
 
         # Sort PSMs based on calibration criteria
-        sorted_psms = deeplc_df.sort_values(
-            by="score", ascending=self.lower_score_is_better
-        )
+        sorted_psms = deeplc_df.sort_values(by="score", ascending=self.lower_score_is_better)
 
         # Select calibration set
         if isinstance(self.calibration_set_size, float):
@@ -369,13 +357,12 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         else:
             logger.error("calibration_set_size must be either int or float.")
             raise TypeError(
-                "Expected int or float for `calibration_set_size`. "
-                f"Got {type(self.calibration_set_size)} instead."
+                f"Expected int or float for `calibration_set_size`. Got {type(self.calibration_set_size)} instead."
             )
 
         calibration_psms = sorted_psms.head(n_cal)
         logger.debug(f"Selected {n_cal} PSMs for calibration.")
-        calibration_psms = calibration_psms[calibration_psms["label"] == True]
+        calibration_psms = calibration_psms[calibration_psms["label"]]
         logger.debug(f"Selected {len(calibration_psms)} target PSMs for calibration.")
         return calibration_psms
 

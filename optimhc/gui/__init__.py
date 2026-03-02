@@ -2,4 +2,4 @@
 optiMHC GUI module for Streamlit-based interface.
 """
 
-__all__ = ["app"] 
+__all__ = ["app"]

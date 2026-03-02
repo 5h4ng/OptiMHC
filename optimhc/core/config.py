@@ -1,8 +1,8 @@
-import yaml
 import logging
 import os
 from copy import deepcopy
-from typing import List, Union, Dict, Any
+
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ def load_config(config_path):
 class Config:
     """
     Configuration manager for optiMHC pipeline.
-    
+
     This class handles loading, validating, and providing access to configuration parameters
     from YAML files or dictionaries. It implements a fail-fast validation strategy to ensure
     configuration correctness before pipeline execution.
@@ -106,7 +106,7 @@ class Config:
     --------
     >>> # Load from YAML file
     >>> config = Config("path/to/config.yaml")
-    
+
     >>> # Load from dictionary
     >>> config_dict = {
     ...     "inputType": "pepxml",
@@ -115,17 +115,18 @@ class Config:
     ...     "rescore": {"testFDR": 0.01, "model": "Percolator"}
     ... }
     >>> config = Config(config_dict)
-    
+
     >>> # Use default configuration
     >>> config = Config()
-    
+
     >>> # Access configuration values
     >>> input_type = config["inputType"]
     >>> output_dir = config.get("outputDir", "./default")
-    
+
     >>> # Save configuration to file
     >>> config.save("output_config.yaml")
     """
+
     def __init__(self, config_source=None):
         """
         Initialize Config from a YAML file path or a dictionary.
@@ -155,7 +156,7 @@ class Config:
             self._config = _deep_merge(DEFAULT_CONFIG, config_source)
         else:
             raise ValueError("Config source must be a file path, dict, or None.")
-        
+
     # TODO: allele name validation
     def validate(self):
         """
@@ -190,7 +191,7 @@ class Config:
             if field not in self._config:
                 logger.error(f"Missing required configuration: '{field}'")
                 raise ValueError(f"Missing required configuration: '{field}'")
-            
+
             if field == "inputFile" and self._config[field] == []:
                 logger.error("inputFile list cannot be empty")
                 raise ValueError("inputFile list cannot be empty")
@@ -201,8 +202,11 @@ class Config:
         if self._config["inputType"] not in ("pepxml", "pin"):
             logger.error("inputType must be 'pepxml' or 'pin'")
             raise ValueError("inputType must be 'pepxml' or 'pin'")
-        
-        if self._config['inputType'] == 'pin' and self._config.get('retentionTimeColumn', None) is None:
+
+        if (
+            self._config["inputType"] == "pin"
+            and self._config.get("retentionTimeColumn", None) is None
+        ):
             logger.error("retentionTimeColumn must be specified when inputType is 'pin'")
             raise ValueError("retentionTimeColumn must be specified when inputType is 'pin'")
 
@@ -213,7 +217,7 @@ class Config:
         if not input_files:
             logger.error("inputFile list cannot be empty")
             raise ValueError("inputFile list cannot be empty")
-        
+
         for file_path in input_files:
             if not os.path.exists(file_path):
                 logger.error(f"Input file does not exist: {file_path}")
@@ -225,25 +229,31 @@ class Config:
             raise ValueError("outputDir must be a string")
         if not output_dir:
             logger.error("outputDir is required")
-            raise ValueError("outputDir is required")     
+            raise ValueError("outputDir is required")
         os.makedirs(output_dir, exist_ok=True)
 
         # TODO: Validate feature generator configuration
         valid_generators = {
-            "Basic", "OverlappingPeptide", "PWM", "MHCflurry", 
-            "NetMHCpan", "NetMHCIIpan", "DeepLC", "SpectralSimilarity"
+            "Basic",
+            "OverlappingPeptide",
+            "PWM",
+            "MHCflurry",
+            "NetMHCpan",
+            "NetMHCIIpan",
+            "DeepLC",
+            "SpectralSimilarity",
         }
-        
-        if self._config['featureGenerator'] is None:
-            logger.warning('No feature generators specified.')
-            self._config['featureGenerator'] = []
+
+        if self._config["featureGenerator"] is None:
+            logger.warning("No feature generators specified.")
+            self._config["featureGenerator"] = []
         for fg in self._config["featureGenerator"]:
             if fg["name"] not in valid_generators:
                 logger.error(f"Invalid feature generator: {fg['name']}")
                 raise ValueError(f"Invalid feature generator: {fg['name']}")
 
         valid_sources = valid_generators | {"Original", "ContigFeatures"}
-        if self._config.get("experiments", None) is not None: # experiment mode
+        if self._config.get("experiments", None) is not None:  # experiment mode
             if not isinstance(self._config["experiments"], list):
                 logger.error("experiments must be a list")
                 raise ValueError("experiments must be a list")
@@ -253,7 +263,6 @@ class Config:
                         logger.error(f"Invalid source in experiments: {source}")
                         raise ValueError(f"Invalid source in experiments: {source}")
 
-        
     def to_dict(self):
         return deepcopy(self._config)
 

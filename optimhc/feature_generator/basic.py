@@ -1,11 +1,13 @@
 # feature_generator/basic.py
 
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
-import pandas as pd
-from typing import List
 import logging
-from optimhc import utils
+from typing import List
+
+import pandas as pd
 from scipy.stats import entropy  # Import entropy from scipy
+
+from optimhc import utils
+from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -139,26 +141,16 @@ class BasicFeatureGenerator(BaseFeatureGenerator):
         """
         logger.info("Generating basic features.")
         peptides_df = pd.DataFrame(self.peptides, columns=["Peptide"])
-        peptides_df["clean_peptide"] = peptides_df["Peptide"].apply(
-            self._preprocess_peptide
-        )
+        peptides_df["clean_peptide"] = peptides_df["Peptide"].apply(self._preprocess_peptide)
         peptides_df["peptide_length"] = peptides_df["clean_peptide"].apply(len)
         self.avg_length = peptides_df["peptide_length"].mean()
-        peptides_df["length_diff_from_avg"] = (
-            peptides_df["peptide_length"] - self.avg_length
-        )
-        peptides_df["abs_length_diff_from_avg"] = peptides_df[
-            "length_diff_from_avg"
-        ].abs()
-        peptides_df["unique_aa_count"] = peptides_df["clean_peptide"].apply(
-            lambda x: len(set(x))
-        )
+        peptides_df["length_diff_from_avg"] = peptides_df["peptide_length"] - self.avg_length
+        peptides_df["abs_length_diff_from_avg"] = peptides_df["length_diff_from_avg"].abs()
+        peptides_df["unique_aa_count"] = peptides_df["clean_peptide"].apply(lambda x: len(set(x)))
         peptides_df["unique_aa_proportion"] = (
             peptides_df["unique_aa_count"] / peptides_df["peptide_length"]
         )
-        peptides_df["shannon_entropy"] = peptides_df["clean_peptide"].apply(
-            self._shannon_entropy
-        )
+        peptides_df["shannon_entropy"] = peptides_df["clean_peptide"].apply(self._shannon_entropy)
         features_df = peptides_df[["Peptide"] + self.feature_columns]
         # Fix SettingWithCopyWarning: make an explicit copy before assignment
         features_df = features_df.copy()

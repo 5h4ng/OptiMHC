@@ -1,11 +1,11 @@
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+import logging
+from typing import List
+
 import pandas as pd
 from mhcflurry import Class1PresentationPredictor
-from typing import List, Dict
+
 from optimhc import utils
-import logging
-from tqdm import tqdm
-from typing import Optional, List, Dict, Union
+from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -144,9 +144,11 @@ class MHCflurryFeatureGenerator(BaseFeatureGenerator):
             # filter out peptides with length between 8 and 15, which are the only lengths supported by MHCflurry
             peptides_to_predict = self.predictions[
                 self.predictions["clean_peptide"].apply(
-                    lambda x: MHCflurryFeatureGenerator.MIN_PEPTIDE_LENGTH
-                    <= len(x)
-                    <= MHCflurryFeatureGenerator.MAX_PEPTIDE_LENGTH
+                    lambda x: (
+                        MHCflurryFeatureGenerator.MIN_PEPTIDE_LENGTH
+                        <= len(x)
+                        <= MHCflurryFeatureGenerator.MAX_PEPTIDE_LENGTH
+                    )
                 )
             ]
             logger.info(
@@ -270,13 +272,10 @@ class MHCflurryFeatureGenerator(BaseFeatureGenerator):
             },
             inplace=True,
         )
-        na_count = features_df["mhcflurry_affinity"].isna().sum()
         features_df.fillna(
             value={
                 "mhcflurry_affinity": features_df["mhcflurry_affinity"].median(),
-                "mhcflurry_processing_score": features_df[
-                    "mhcflurry_processing_score"
-                ].median(),
+                "mhcflurry_processing_score": features_df["mhcflurry_processing_score"].median(),
                 "mhcflurry_presentation_score": features_df[
                     "mhcflurry_presentation_score"
                 ].median(),
@@ -324,13 +323,9 @@ class MHCflurryFeatureGenerator(BaseFeatureGenerator):
         The best allele is determined by the lowest presentation percentile rank.
         """
         best_allele_df = self.predictions[["Peptide", "best_allele"]]
-        best_allele_df.rename(
-            columns={"best_allele": "mhcflurry_best_allele"}, inplace=True
-        )
+        best_allele_df.rename(columns={"best_allele": "mhcflurry_best_allele"}, inplace=True)
 
-        logger.info(
-            f"Generated best allele information for {len(best_allele_df)} peptides."
-        )
+        logger.info(f"Generated best allele information for {len(best_allele_df)} peptides.")
 
         return best_allele_df
 
@@ -349,7 +344,5 @@ class MHCflurryFeatureGenerator(BaseFeatureGenerator):
             If no predictions are available.
         """
         if self.predictions is None:
-            raise ValueError(
-                "No predictions available. Please run 'generate_features' first."
-            )
+            raise ValueError("No predictions available. Please run 'generate_features' first.")
         return self.predictions
