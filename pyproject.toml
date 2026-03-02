@@ -53,7 +53,7 @@ include = ["optimhc*"]
 optimhc = ["PWMs*"]
 
 [tool.ruff]
-exclude = ["docs", "examples"]
+exclude = ["docs", "examples", "optimhc/gui/"]
 line-length = 99
 target-version = "py39"
 
