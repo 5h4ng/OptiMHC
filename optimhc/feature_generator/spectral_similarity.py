@@ -54,6 +54,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         remove_pre_nxt_aa: bool = False,
         mod_dict: Optional[Dict[str, str]] = None,
         url: str = "koina.wilhelmlab.org:443",
+        ssl: bool = True,
         top_n: int = 36,
         tolerance_ppm: float = 20,
     ):
@@ -69,6 +70,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         self.remove_pre_nxt_aa = remove_pre_nxt_aa
         self.mod_dict = mod_dict
         self.url = url
+        self.ssl = ssl
         self.top_n = top_n
         self.tolerance_ppm = tolerance_ppm
         self.results = None
@@ -253,7 +255,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         if self.fragmentation_types is not None:
             inputs["fragmentation_types"] = np.array(self.fragmentation_types)
 
-        model = Koina(self.model_type, self.url)
+        model = Koina(self.model_type, self.url, ssl=self.ssl)
 
         try:
             predictions = model.predict(inputs)

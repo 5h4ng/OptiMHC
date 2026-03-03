@@ -327,6 +327,7 @@ def generate_features(psms, config):
                     remove_pre_nxt_aa=remove_pre_nxt_aa,
                     mod_dict=mod_dict,
                     url=generator_params.get("url"),
+                    ssl=generator_params.get("ssl", True),
                     top_n=generator_params.get("numTopPeaks", 36),
                     tolerance_ppm=generator_params.get("tolerance", 20),
                 )

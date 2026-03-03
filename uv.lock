@@ -1381,7 +1381,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "deeplc", specifier = "==3.1.1" },
-    { name = "koinapy", specifier = "==0.0.10" },
+    { name = "koinapy", specifier = ">=0.0.10" },
     { name = "lxml", specifier = "==5.3.0" },
     { name = "matplotlib", specifier = "==3.9.2" },
     { name = "mhcflurry", specifier = "==2.1.4" },
@@ -1406,8 +1406,8 @@ provides-extras = ["gui"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pre-commit" },
-    { name = "pytest" },
+    { name = "pre-commit", specifier = ">=4.3.0" },
+    { name = "pytest", specifier = ">=8.4.0" },
     { name = "ruff" },
 ]
 

@@ -30,7 +30,8 @@ featureGenerator:
       instrument: LUMOS
       tolerance: 20
       numTopPeaks: 36
-      url: koina.wilhelmlab.org:443
+      url: 127.0.0.1:8500   # gRPC port (optiMHC uses gRPC); use 8501 for HTTP/curl
+      ssl: false            # required for local Triton/Koina (insecure gRPC)
   - name: DeepLC
     params:
       calibrationCriteria: expect

@@ -14,7 +14,7 @@ license = { text = "MIT" }
 requires-python = ">=3.10,<3.13"
 dependencies = [
     "deeplc==3.1.1",
-    "koinapy==0.0.10",
+    "koinapy>=0.0.10",
     "lxml==5.3.0",
     "matplotlib==3.9.2",
     "mhctools @ git+https://github.com/openvax/mhctools.git@868ed09b4dfcab18aed563727d65bca3408476ea",
@@ -38,6 +38,13 @@ gui = [
     "streamlit>=1.24.0",
     "plotly>=5.13.0",
     "watchdog>=3.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "pre-commit>=4.3.0",
+    "ruff",
 ]
 
 [project.scripts]
@@ -64,10 +71,3 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
-
-[dependency-groups]
-dev = [
-    "pytest",
-    "ruff",
-    "pre-commit",
-]
