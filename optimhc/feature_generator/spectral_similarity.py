@@ -902,29 +902,6 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
 
         return predicted_seen_nonzero, predicted_not_seen
 
-    def _calculate_bray_curtis_similarity(
-        self, exp_vector: np.ndarray, pred_vector: np.ndarray
-    ) -> float:
-        """
-        Calculate Bray-Curtis similarity between experimental and predicted vectors
-
-        Parameters:
-            exp_vector (np.ndarray): Experimental intensity vector
-            pred_vector (np.ndarray): Predicted intensity vector
-
-        Returns:
-            float: Bray-Curtis similarity (0-1, higher is better)
-        """
-        # Bray-Curtis dissimilarity: sum(|exp - pred|) / sum(exp + pred)
-        numerator = np.sum(np.abs(exp_vector - pred_vector))
-        denominator = np.sum(exp_vector + pred_vector)
-
-        if denominator == 0:
-            return 0.0
-
-        # Convert dissimilarity to similarity: 1 - dissimilarity
-        return 1.0 - (numerator / denominator)
-
     def _calculate_similarity_features(
         self, exp_vector: np.ndarray, pred_vector: np.ndarray
     ) -> Dict[str, float]:
@@ -950,7 +927,6 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             - unweighted_entropy_similarity: Spectral entropy similarity
             - predicted_seen_nonzero: Number of predicted peaks seen in experimental spectrum
             - predicted_not_seen: Number of predicted peaks not seen in experimental spectrum
-            - bray_curtis_similarity: Bray-Curtis similarity (0-1)
         """
         spectral_angle_similarity = self._calculate_spectral_angle_similarity(
             exp_vector, pred_vector
@@ -965,8 +941,6 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         predicted_seen_nonzero, predicted_not_seen = self._calculate_predicted_counts(
             exp_vector, pred_vector
         )
-        bray_curtis_similarity = self._calculate_bray_curtis_similarity(exp_vector, pred_vector)
-
         return {
             "spectral_angle_similarity": spectral_angle_similarity,
             "cosine_similarity": cosine_similarity,
@@ -976,7 +950,6 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             "unweighted_entropy_similarity": unweighted_entropy_similarity,
             "predicted_seen_nonzero": predicted_seen_nonzero,
             "predicted_not_seen": predicted_not_seen,
-            "bray_curtis_similarity": bray_curtis_similarity,
         }
 
     def _generate_features(self) -> pd.DataFrame:
