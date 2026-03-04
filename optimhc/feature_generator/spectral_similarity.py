@@ -10,6 +10,7 @@ from scipy.stats import pearsonr, spearmanr
 
 from optimhc import utils
 from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature_generator.numba_utils import align_peaks
 from optimhc.parser import extract_mzml_data
 
 logger = logging.getLogger(__name__)
@@ -411,10 +412,9 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         pred_mz: List[float],
         pred_intensity: List[float],
         pred_annotation: Optional[List[str]] = None,
-        use_ppm: bool = True,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
         """
-        Align experimental and predicted spectra.
+        Align experimental and predicted spectra using ppm tolerance.
 
         Parameters:
             exp_mz (List[float]): Experimental m/z values
@@ -422,7 +422,6 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             pred_mz (List[float]): Predicted m/z values
             pred_intensity (List[float]): Predicted intensity values
             pred_annotation (Optional[List[str]]): Predicted fragment annotations
-            use_ppm (bool): Whether to use ppm tolerance or Da tolerance
 
         Returns:
             Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
@@ -445,42 +444,18 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             )
 
         n_pred = len(pred_mz_sorted)
-        aligned_exp_intensity = np.zeros(n_pred, dtype=np.float64)
         aligned_pred_intensity = pred_intensity_sorted.copy()
+
+        aligned_exp_intensity, matched_exp_indices = align_peaks(
+            np.ascontiguousarray(exp_mz_sorted, dtype=np.float64),
+            np.ascontiguousarray(exp_intensity_sorted, dtype=np.float64),
+            np.ascontiguousarray(pred_mz_sorted, dtype=np.float64),
+            self.tolerance_ppm,
+        )
+
         matched_indices = np.empty((n_pred, 2), dtype=np.int64)
         matched_indices[:, 0] = np.arange(n_pred)
-        matched_indices[:, 1] = -1
-
-        start_pos = 0
-        n_exp = len(exp_mz_sorted)
-
-        for i in range(n_pred):
-            pred_peak_mz = pred_mz_sorted[i]
-            if use_ppm:
-                fragment_min = pred_peak_mz * (1 - self.tolerance_ppm / 1e6)
-                fragment_max = pred_peak_mz * (1 + self.tolerance_ppm / 1e6)
-            else:
-                # TODO: Make this a parameter
-                fragment_min = pred_peak_mz - 0.02
-                fragment_max = pred_peak_mz + 0.02
-
-            matched_int = 0.0
-            past_start = 0
-
-            while start_pos + past_start < n_exp:
-                exp_peak_mz = exp_mz_sorted[start_pos + past_start]
-                if exp_peak_mz < fragment_min:
-                    start_pos += 1
-                elif exp_peak_mz <= fragment_max:
-                    exp_peak_int = exp_intensity_sorted[start_pos + past_start]
-                    if exp_peak_int > matched_int:
-                        matched_int = exp_peak_int
-                        matched_indices[i, 1] = start_pos + past_start
-                    past_start += 1
-                else:
-                    break
-
-            aligned_exp_intensity[i] = matched_int
+        matched_indices[:, 1] = matched_exp_indices
 
         additional_info = {
             "exp_mz_sorted": exp_mz_sorted,
@@ -576,7 +551,6 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
                 pred_mz,
                 pred_intensity,
                 pred_annotation,
-                use_ppm=True,
             )
         )
 
@@ -997,7 +971,6 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
                 pred_mz,
                 pred_intensity,
                 pred_annotation,
-                use_ppm=True,
             )
 
             # Extract top N peaks for similarity calculations
