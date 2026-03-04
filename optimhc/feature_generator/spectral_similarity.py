@@ -6,11 +6,10 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from koinapy import Koina
-from scipy.stats import pearsonr, spearmanr
 
 from optimhc import utils
 from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
-from optimhc.feature_generator.numba_utils import align_peaks
+from optimhc.feature_generator.numba_utils import align_peaks, compute_similarity_features
 from optimhc.parser import extract_mzml_data
 
 logger = logging.getLogger(__name__)
@@ -561,359 +560,28 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
 
         return top_exp_intensity, top_pred_intensity, top_matched_indices
 
-    def _normalize_vector_l2(self, vector: np.ndarray) -> np.ndarray:
-        """
-        Normalize a vector using L2 normalization (unit vector).
-
-        Parameters
-        ----------
-        vector : np.ndarray
-            Input vector to normalize.
-
-        Returns
-        -------
-        np.ndarray
-            L2-normalized vector.
-
-        Notes
-        -----
-        If the input vector has zero norm, the original vector is returned unchanged.
-        """
-        norm = np.linalg.norm(vector)  # Calculate the L2 norm (Euclidean norm)
-        if norm == 0:
-            return vector
-        return vector / norm
-
-    def _normalize_vector_sum(self, vector: np.ndarray) -> np.ndarray:
-        """
-        Perform sum normalization (probability normalization) on a vector.
-
-        Parameters
-        ----------
-        vector : np.ndarray
-            Input vector.
-
-        Returns
-        -------
-        np.ndarray
-            Sum normalized vector (sum to 1).
-
-        Notes
-        -----
-        If the input vector has zero sum, the original vector is returned unchanged.
-        """
-        total = np.sum(vector)
-        if total > 0:
-            return vector / total
-        return vector
-
-    def _calculate_spectral_angle_similarity(
-        self, exp_vector: np.ndarray, pred_vector: np.ndarray
-    ) -> float:
-        """
-        Calculate the spectral angle between experimental and predicted vectors.
-
-        Normalize the angle to [0, 1] where 1 is the best similarity.
-
-        Parameters
-        ----------
-        exp_vector : np.ndarray
-            Experimental intensity vector.
-        pred_vector : np.ndarray
-            Predicted intensity vector.
-
-        Returns
-        -------
-        float
-            Spectral angle similarity (0-1, higher is better).
-
-        Notes
-        -----
-        The spectral angle is calculated as: SA = 1 - (2 * angle / π),
-        where angle is the angle between the normalized vectors in radians.
-        """
-        exp_norm = self._normalize_vector_l2(exp_vector)
-        pred_norm = self._normalize_vector_l2(pred_vector)
-        dot_product = np.sum(exp_norm * pred_norm)
-
-        # Clamp dot product to [-1, 1] to avoid numerical issues
-        dot_product = np.clip(dot_product, -1.0, 1.0)
-        angle = np.arccos(dot_product)  # Angle in radians
-
-        # Return similarity score: SA = 1 - (2 * angle / π)
-        return 1 - (2 * angle / np.pi)
-
-    def _calculate_cosine_similarity(
-        self, exp_vector: np.ndarray, pred_vector: np.ndarray
-    ) -> float:
-        """
-        Calculate the cosine similarity between experimental and predicted vectors.
-
-        Parameters
-        ----------
-        exp_vector : np.ndarray
-            Experimental intensity vector.
-        pred_vector : np.ndarray
-            Predicted intensity vector.
-
-        Returns
-        -------
-        float
-            Cosine similarity (0-1, higher is better).
-
-        Notes
-        -----
-        The cosine similarity is calculated as 1 - cosine_distance.
-        If either vector has zero sum, returns 0.0.
-        """
-        if np.sum(exp_vector) == 0 or np.sum(pred_vector) == 0:
-            return 0.0
-
-        exp_norm = self._normalize_vector_l2(exp_vector)
-        pred_norm = self._normalize_vector_l2(pred_vector)
-
-        return float(np.dot(exp_norm, pred_norm))
-
-    def _calculate_spearman_correlation(
-        self, exp_vector: np.ndarray, pred_vector: np.ndarray
-    ) -> float:
-        """
-        Calculate Spearman correlation coefficient between experimental and predicted vectors.
-
-        Parameters
-        ----------
-        exp_vector : np.ndarray
-            Experimental intensity vector.
-        pred_vector : np.ndarray
-            Predicted intensity vector.
-
-        Returns
-        -------
-        float
-            Spearman correlation coefficient (-1 to 1, higher is better).
-
-        Notes
-        -----
-        If either vector has no variation (std = 0), returns 0.0.
-        """
-        # Handle vectors with no variation
-        if np.std(exp_vector) == 0 or np.std(pred_vector) == 0:
-            return 0.0
-
-        try:
-            r, _ = spearmanr(exp_vector, pred_vector)
-            return r
-        except Exception:
-            return
-
-    def _calculate_pearson_correlation(
-        self, exp_vector: np.ndarray, pred_vector: np.ndarray
-    ) -> float:
-        """
-        Calculate Pearson correlation coefficient between experimental and predicted vectors.
-
-        Parameters
-        ----------
-        exp_vector : np.ndarray
-            Experimental intensity vector.
-        pred_vector : np.ndarray
-            Predicted intensity vector.
-
-        Returns
-        -------
-        float
-            Pearson correlation coefficient (-1 to 1, higher is better).
-
-        Notes
-        -----
-        If either vector has no variation (std = 0), returns 0.0.
-        """
-        # Handle vectors with no variation
-        if np.std(exp_vector) == 0 or np.std(pred_vector) == 0:
-            return 0.0
-
-        try:
-            r, _ = pearsonr(exp_vector, pred_vector)
-            return r
-        except Exception:
-            return 0.0
-
-    def _calculate_mean_squared_error(
-        self, exp_vector: np.ndarray, pred_vector: np.ndarray
-    ) -> float:
-        """
-        Calculate mean squared error between experimental and predicted vectors.
-
-        Parameters
-        ----------
-        exp_vector : np.ndarray
-            Experimental intensity vector.
-        pred_vector : np.ndarray
-            Predicted intensity vector.
-
-        Returns
-        -------
-        float
-            Mean squared error (lower is better).
-
-        Notes
-        -----
-        The vectors are normalized using L2 normalization before calculating
-        the mean squared error for fair comparison.
-        """
-        # Normalize vectors for fair comparison using L2 normalization
-        exp_norm = self._normalize_vector_l2(exp_vector)
-        pred_norm = self._normalize_vector_l2(pred_vector)
-
-        return np.mean((exp_norm - pred_norm) ** 2)
-
-    def _calculate_entropy(self, vector: np.ndarray) -> float:
-        """
-        Calculate Shannon entropy of a vector that has already been sum-1 normalized.
-
-        Parameters
-        ----------
-        vector : np.ndarray
-            Input vector, which has already been sum-1 normalized.
-
-        Returns
-        -------
-        float
-            Shannon entropy.
-
-        Notes
-        -----
-        Only non-zero probabilities are considered for entropy calculation.
-        If all probabilities are zero, returns 0.0.
-        """
-        # Only consider non-zero probabilities for entropy calculation
-        mask = vector > 0
-        if not np.any(mask):
-            return 0.0
-
-        prob_vector = vector[mask]
-        return -np.sum(prob_vector * np.log(prob_vector))
-
-    def _calculate_unweighted_entropy_similarity(
-        self, exp_vector: np.ndarray, pred_vector: np.ndarray
-    ) -> float:
-        """
-        Calculate unweighted spectral entropy between experimental and predicted vectors.
-
-        Parameters
-        ----------
-        exp_vector : np.ndarray
-            Experimental intensity vector.
-        pred_vector : np.ndarray
-            Predicted intensity vector.
-
-        Returns
-        -------
-        float
-            Spectral entropy similarity.
-
-        Notes
-        -----
-        Based on the method described in https://www.nature.com/articles/s41592-021-01331-z.
-        The spectral entropy is calculated using the formula:
-        1 - (2*S_PM - S_P - S_M)/ln(4), where S_PM is the entropy of the mixed
-        distribution, and S_P and S_M are the entropies of the individual distributions.
-        """
-        # Sum-to-1 normalization
-        sum_normalized_exp_vector = self._normalize_vector_sum(exp_vector)
-        sum_normalized_pred_vector = self._normalize_vector_sum(pred_vector)
-        s_exp = self._calculate_entropy(sum_normalized_exp_vector)
-        s_pred = self._calculate_entropy(sum_normalized_pred_vector)
-        s_mixed = self._calculate_entropy(
-            0.5 * (sum_normalized_exp_vector + sum_normalized_pred_vector)
-        )
-
-        # Calculate spectral entropy using formula: 1 - (2*S_PM - S_P - S_M)/ln(4)
-        unweighted_entropy_similarity = 1.0 - (2 * s_mixed - s_exp - s_pred) / np.log(4)
-
-        return unweighted_entropy_similarity
-
-    # TODO: Assign weight to each peak based on the entropy of a spectrum.
-    # The original paper uses 3 as a entropy cutoff to assign more weight to the low intensity peaks.
-    # But the cutoff value is determined by a small-molecular dataset rather than a proteomics dataset.
-    # Thus, we need to design our own heuristic algorithm to calculate a similar feature for proteomics dataset.
-    # We can refer to the practice of MSBooster.
-    # url: https://github.com/Nesvilab/MSBooster/blame/master/src/main/java/features/spectra/SpectrumComparison.java#L803
-
-    # def _calculate_entropy_similarity(self, exp_vector: np.ndarray, pred_vector: np.ndarray) -> float:
-
-    def _calculate_predicted_counts(
-        self, exp_vector: np.ndarray, pred_vector: np.ndarray
-    ) -> Tuple[int, int]:
-        """
-        Calculate counts of predicted peaks seen/not seen in experimental spectrum.
-
-        Parameters
-        ----------
-        exp_vector : np.ndarray
-            Experimental intensity vector.
-        pred_vector : np.ndarray
-            Predicted intensity vector.
-
-        Returns
-        -------
-        tuple of (int, int)
-            - predicted_seen_nonzero: Number of predicted peaks that are also present in experimental spectrum
-            - predicted_not_seen: Number of predicted peaks that are not present in experimental spectrum
-        """
-        predicted_seen_nonzero = np.sum((pred_vector > 0) & (exp_vector > 0))
-        predicted_not_seen = np.sum((pred_vector > 0) & (exp_vector == 0))
-
-        return predicted_seen_nonzero, predicted_not_seen
-
     def _calculate_similarity_features(
         self, exp_vector: np.ndarray, pred_vector: np.ndarray
     ) -> Dict[str, float]:
         """
         Calculate all similarity features between experimental and predicted vectors.
 
-        Parameters
-        ----------
-        exp_vector : np.ndarray
-            Experimental intensity vector.
-        pred_vector : np.ndarray
-            Predicted intensity vector.
-
-        Returns
-        -------
-        dict of str to float
-            Dictionary of similarity features, including:
-            - spectral_angle_similarity: Spectral angle similarity (0-1)
-            - cosine_similarity: Cosine similarity (0-1)
-            - pearson_correlation: Pearson correlation (-1 to 1)
-            - spearman_correlation: Spearman correlation (-1 to 1)
-            - mean_squared_error: Mean squared error
-            - unweighted_entropy_similarity: Spectral entropy similarity
-            - predicted_seen_nonzero: Number of predicted peaks seen in experimental spectrum
-            - predicted_not_seen: Number of predicted peaks not seen in experimental spectrum
+        Uses a single numba-compiled function that computes all metrics in one
+        pass, reusing shared intermediate values (L2 norms, sums, ranks).
         """
-        spectral_angle_similarity = self._calculate_spectral_angle_similarity(
-            exp_vector, pred_vector
-        )
-        cosine_similarity = self._calculate_cosine_similarity(exp_vector, pred_vector)
-        pearson_correlation = self._calculate_pearson_correlation(exp_vector, pred_vector)
-        spearman_correlation = self._calculate_spearman_correlation(exp_vector, pred_vector)
-        mean_squared_error = self._calculate_mean_squared_error(exp_vector, pred_vector)
-        unweighted_entropy_similarity = self._calculate_unweighted_entropy_similarity(
-            exp_vector, pred_vector
-        )
-        predicted_seen_nonzero, predicted_not_seen = self._calculate_predicted_counts(
-            exp_vector, pred_vector
+        (sa, cos, pear, spear, mse, ent, seen, not_seen) = compute_similarity_features(
+            np.ascontiguousarray(exp_vector, dtype=np.float64),
+            np.ascontiguousarray(pred_vector, dtype=np.float64),
         )
         return {
-            "spectral_angle_similarity": spectral_angle_similarity,
-            "cosine_similarity": cosine_similarity,
-            "pearson_correlation": pearson_correlation,
-            "spearman_correlation": spearman_correlation,
-            "mean_squared_error": mean_squared_error,
-            "unweighted_entropy_similarity": unweighted_entropy_similarity,
-            "predicted_seen_nonzero": predicted_seen_nonzero,
-            "predicted_not_seen": predicted_not_seen,
+            "spectral_angle_similarity": sa,
+            "cosine_similarity": cos,
+            "pearson_correlation": pear,
+            "spearman_correlation": spear,
+            "mean_squared_error": mse,
+            "unweighted_entropy_similarity": ent,
+            "predicted_seen_nonzero": int(seen),
+            "predicted_not_seen": int(not_seen),
         }
 
     def _generate_features(self) -> pd.DataFrame:
@@ -949,69 +617,104 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             logger.warning("Some PSMs were not found in experimental spectral data")
 
         psm_df = pd.merge(psm_df, pred_spectra_df, on=["processed_peptide", "charge"], how="inner")
-        results = []
 
-        logger.info("Matching experimental and predicted spectra... This may take a while.")
-        for _, row in psm_df.iterrows():
-            exp_mz = row["mz"]
-            exp_intensity = row["intensity"]
-            pred_mz = row["pred_mz"]
-            pred_intensity = row["pred_intensity"]
-            pred_annotation = row["annotation"] if "annotation" in row else None
+        n_rows = len(psm_df)
+        logger.info(f"Matching experimental and predicted spectra for {n_rows} PSMs...")
 
-            # Align all peaks
-            (
-                all_exp_intensity,
-                all_pred_intensity,
-                all_matched_indices,
-                additional_info,
-            ) = self._align_spectra_all_peaks(
-                exp_mz,
-                exp_intensity,
-                pred_mz,
-                pred_intensity,
-                pred_annotation,
+        exp_mz_col = psm_df["mz"].values
+        exp_int_col = psm_df["intensity"].values
+        pred_mz_col = psm_df["pred_mz"].values
+        pred_int_col = psm_df["pred_intensity"].values
+        has_annotation = "annotation" in psm_df.columns
+        pred_ann_col = psm_df["annotation"].values if has_annotation else None
+
+        sa_arr = np.empty(n_rows, dtype=np.float64)
+        cos_arr = np.empty(n_rows, dtype=np.float64)
+        pear_arr = np.empty(n_rows, dtype=np.float64)
+        spear_arr = np.empty(n_rows, dtype=np.float64)
+        mse_arr = np.empty(n_rows, dtype=np.float64)
+        ent_arr = np.empty(n_rows, dtype=np.float64)
+        seen_arr = np.empty(n_rows, dtype=np.int64)
+        not_seen_arr = np.empty(n_rows, dtype=np.int64)
+
+        exp_vectors = [None] * n_rows
+        pred_vectors = [None] * n_rows
+        matched_indices_list = [None] * n_rows
+        exp_top_vectors = [None] * n_rows
+        pred_top_vectors = [None] * n_rows
+        top_matched_list = [None] * n_rows
+        exp_mz_sorted_list = [None] * n_rows
+        exp_int_sorted_list = [None] * n_rows
+        pred_mz_sorted_list = [None] * n_rows
+        pred_int_sorted_list = [None] * n_rows
+        pred_ann_sorted_list = [None] * n_rows if has_annotation else None
+
+        for i in range(n_rows):
+            pred_ann = pred_ann_col[i] if pred_ann_col is not None else None
+
+            all_exp, all_pred, all_matched, info = self._align_spectra_all_peaks(
+                exp_mz_col[i],
+                exp_int_col[i],
+                pred_mz_col[i],
+                pred_int_col[i],
+                pred_ann,
             )
 
-            # Extract top N peaks for similarity calculations
-            top_exp_intensity, top_pred_intensity, top_matched_indices = (
-                self._get_top_peaks_vectors(
-                    all_exp_intensity,
-                    all_pred_intensity,
-                    all_matched_indices,
-                    self.top_n,
-                )
+            top_exp, top_pred, top_matched = self._get_top_peaks_vectors(
+                all_exp,
+                all_pred,
+                all_matched,
+                self.top_n,
             )
 
-            similarity_features = self._calculate_similarity_features(
-                top_exp_intensity, top_pred_intensity
+            (sa, cos, pear, spear, mse, ent, seen, not_seen) = compute_similarity_features(
+                np.ascontiguousarray(top_exp, dtype=np.float64),
+                np.ascontiguousarray(top_pred, dtype=np.float64),
             )
-            result = {
-                "exp_vector": all_exp_intensity.tolist(),
-                "pred_vector": all_pred_intensity.tolist(),
-                "matched_indices": all_matched_indices,
-                "exp_top_vector": top_exp_intensity.tolist(),
-                "pred_top_vector": top_pred_intensity.tolist(),
-                "top_matched_indices": top_matched_indices,
-                **similarity_features,
-                "exp_mz_sorted": additional_info["exp_mz_sorted"].tolist(),
-                "exp_intensity_sorted": additional_info["exp_intensity_sorted"].tolist(),
-                "pred_mz_sorted": additional_info["pred_mz_sorted"].tolist(),
-                "pred_intensity_sorted": additional_info["pred_intensity_sorted"].tolist(),
-            }
+            sa_arr[i] = sa
+            cos_arr[i] = cos
+            pear_arr[i] = pear
+            spear_arr[i] = spear
+            mse_arr[i] = mse
+            ent_arr[i] = ent
+            seen_arr[i] = int(seen)
+            not_seen_arr[i] = int(not_seen)
 
-            # Add annotations if available
-            if additional_info["pred_annotation_sorted"] is not None:
-                result["pred_annotation_sorted"] = additional_info[
-                    "pred_annotation_sorted"
-                ].tolist()
+            exp_vectors[i] = all_exp
+            pred_vectors[i] = all_pred
+            matched_indices_list[i] = all_matched
+            exp_top_vectors[i] = top_exp
+            pred_top_vectors[i] = top_pred
+            top_matched_list[i] = top_matched
+            exp_mz_sorted_list[i] = info["exp_mz_sorted"]
+            exp_int_sorted_list[i] = info["exp_intensity_sorted"]
+            pred_mz_sorted_list[i] = info["pred_mz_sorted"]
+            pred_int_sorted_list[i] = info["pred_intensity_sorted"]
+            if pred_ann_sorted_list is not None:
+                pred_ann_sorted_list[i] = info["pred_annotation_sorted"]
 
-            results.append(result)
+        psm_df = psm_df.reset_index(drop=True)
+        psm_df["spectral_angle_similarity"] = sa_arr
+        psm_df["cosine_similarity"] = cos_arr
+        psm_df["pearson_correlation"] = pear_arr
+        psm_df["spearman_correlation"] = spear_arr
+        psm_df["mean_squared_error"] = mse_arr
+        psm_df["unweighted_entropy_similarity"] = ent_arr
+        psm_df["predicted_seen_nonzero"] = seen_arr
+        psm_df["predicted_not_seen"] = not_seen_arr
 
-        results_df = pd.DataFrame(results)
-        psm_df = pd.concat(
-            [psm_df.reset_index(drop=True), results_df.reset_index(drop=True)], axis=1
-        )
+        psm_df["exp_vector"] = exp_vectors
+        psm_df["pred_vector"] = pred_vectors
+        psm_df["matched_indices"] = matched_indices_list
+        psm_df["exp_top_vector"] = exp_top_vectors
+        psm_df["pred_top_vector"] = pred_top_vectors
+        psm_df["top_matched_indices"] = top_matched_list
+        psm_df["exp_mz_sorted"] = exp_mz_sorted_list
+        psm_df["exp_intensity_sorted"] = exp_int_sorted_list
+        psm_df["pred_mz_sorted"] = pred_mz_sorted_list
+        psm_df["pred_intensity_sorted"] = pred_int_sorted_list
+        if pred_ann_sorted_list is not None:
+            psm_df["pred_annotation_sorted"] = pred_ann_sorted_list
 
         result_columns = [
             "mz_file_path",
@@ -1029,7 +732,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             "exp_intensity_sorted",
             "pred_mz_sorted",
             "pred_intensity_sorted",
-            ("pred_annotation_sorted" if "pred_annotation_sorted" in psm_df.columns else None),
+            ("pred_annotation_sorted" if pred_ann_sorted_list is not None else None),
             "exp_vector",
             "pred_vector",
             "matched_indices",
