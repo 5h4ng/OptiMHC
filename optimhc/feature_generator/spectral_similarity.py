@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from koinapy import Koina
-from scipy.spatial.distance import cosine
 from scipy.stats import pearsonr, spearmanr
 
 from optimhc import utils
@@ -413,7 +412,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         pred_intensity: List[float],
         pred_annotation: Optional[List[str]] = None,
         use_ppm: bool = True,
-    ) -> Tuple[np.ndarray, np.ndarray, List[Tuple], Dict]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
         """
         Align experimental and predicted spectra.
 
@@ -426,10 +425,11 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             use_ppm (bool): Whether to use ppm tolerance or Da tolerance
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, List[Tuple], Dict]:
+            Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
                 - Aligned experimental intensity vector
                 - Predicted intensity vector
-                - Matching index pairs
+                - Matching index pairs as int array of shape (N, 2),
+                  where column 0 is pred_idx and column 1 is exp_idx (-1 = no match)
                 - Additional info including original sorted arrays
         """
         # Sort both experimental and predicted spectra by m/z
@@ -443,27 +443,31 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             pred_mz_sorted, pred_intensity_sorted, pred_annotation_sorted = (
                 self._sort_spectrum_by_mz(pred_mz, pred_intensity)
             )
-        aligned_exp_intensity = np.zeros(len(pred_mz_sorted))
+
+        n_pred = len(pred_mz_sorted)
+        aligned_exp_intensity = np.zeros(n_pred, dtype=np.float64)
         aligned_pred_intensity = pred_intensity_sorted.copy()
-        matched_indices = []
+        matched_indices = np.empty((n_pred, 2), dtype=np.int64)
+        matched_indices[:, 0] = np.arange(n_pred)
+        matched_indices[:, 1] = -1
 
         start_pos = 0
+        n_exp = len(exp_mz_sorted)
 
-        for i, pred_peak_mz in enumerate(pred_mz_sorted):
+        for i in range(n_pred):
+            pred_peak_mz = pred_mz_sorted[i]
             if use_ppm:
                 fragment_min = pred_peak_mz * (1 - self.tolerance_ppm / 1e6)
                 fragment_max = pred_peak_mz * (1 + self.tolerance_ppm / 1e6)
             else:
-                # If using Da tolerance, use a fixed window (typically ~0.05 Da)
-                tolerance = 0.05  # Default value
-                fragment_min = pred_peak_mz - tolerance
-                fragment_max = pred_peak_mz + tolerance
+                # TODO: Make this a parameter
+                fragment_min = pred_peak_mz - 0.02
+                fragment_max = pred_peak_mz + 0.02
 
-            matched_int = 0
-            matched_exp_idx = None
+            matched_int = 0.0
             past_start = 0
 
-            while start_pos + past_start < len(exp_mz_sorted):
+            while start_pos + past_start < n_exp:
                 exp_peak_mz = exp_mz_sorted[start_pos + past_start]
                 if exp_peak_mz < fragment_min:
                     start_pos += 1
@@ -471,17 +475,12 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
                     exp_peak_int = exp_intensity_sorted[start_pos + past_start]
                     if exp_peak_int > matched_int:
                         matched_int = exp_peak_int
-                        matched_exp_idx = start_pos + past_start
+                        matched_indices[i, 1] = start_pos + past_start
                     past_start += 1
                 else:
                     break
 
             aligned_exp_intensity[i] = matched_int
-
-            # Record matching index pairs (pred_idx, exp_idx)
-            pred_idx = i
-            exp_idx = matched_exp_idx
-            matched_indices.append((pred_idx, exp_idx))
 
         additional_info = {
             "exp_mz_sorted": exp_mz_sorted,
@@ -502,37 +501,30 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         self,
         aligned_exp_intensity: np.ndarray,
         aligned_pred_intensity: np.ndarray,
-        matched_indices: List[Tuple],
+        matched_indices: np.ndarray,
         top_n: int,
-    ) -> Tuple[np.ndarray, np.ndarray, List[Tuple]]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Extract top N peaks based on predicted intensity for similarity calculation
 
         Parameters:
             aligned_exp_intensity (np.ndarray): Aligned experimental intensity vector
             aligned_pred_intensity (np.ndarray): Aligned predicted intensity vector
-            matched_indices (List[Tuple]): Matching index pairs (pred_idx, exp_idx)
+            matched_indices (np.ndarray): Matching index pairs, shape (N, 2)
             top_n (int): Number of top peaks to extract
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, List[Tuple]]:
+            Tuple[np.ndarray, np.ndarray, np.ndarray]:
                 - Top N experimental intensity vector
                 - Top N predicted intensity vector
-                - Top N matching index pairs
+                - Top N matching index pairs, shape (top_n, 2)
         """
-        # Get indices of top N peaks by predicted intensity
         num_peaks = min(top_n, len(aligned_pred_intensity))
         top_pred_indices = np.argsort(-aligned_pred_intensity)[:num_peaks]
 
-        # Extract top N peaks
-        top_exp_intensity = np.zeros(num_peaks)
-        top_pred_intensity = np.zeros(num_peaks)
-        top_matched_indices = []
-
-        for i, orig_idx in enumerate(top_pred_indices):
-            top_exp_intensity[i] = aligned_exp_intensity[orig_idx]
-            top_pred_intensity[i] = aligned_pred_intensity[orig_idx]
-            top_matched_indices.append(matched_indices[orig_idx])
+        top_exp_intensity = aligned_exp_intensity[top_pred_indices]
+        top_pred_intensity = aligned_pred_intensity[top_pred_indices]
+        top_matched_indices = matched_indices[top_pred_indices]
 
         return top_exp_intensity, top_pred_intensity, top_matched_indices
 
@@ -543,7 +535,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         pred_mz: List[float],
         pred_intensity: List[float],
         pred_annotation: Optional[List[str]] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, List[Tuple]]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Align experimental and predicted spectra.
 
@@ -565,10 +557,10 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
 
         Returns
         -------
-        tuple of (np.ndarray, np.ndarray, list of tuple)
+        tuple of (np.ndarray, np.ndarray, np.ndarray)
             - Aligned experimental intensity vector
             - Predicted intensity vector
-            - Matching index pairs (for top N peaks)
+            - Matching index pairs as int array of shape (top_n, 2)
 
         Notes
         -----
@@ -703,12 +695,10 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         if np.sum(exp_vector) == 0 or np.sum(pred_vector) == 0:
             return 0.0
 
-        # Normalize vectors using L2 normalization
         exp_norm = self._normalize_vector_l2(exp_vector)
         pred_norm = self._normalize_vector_l2(pred_vector)
 
-        # Use 1 - cosine distance = cosine similarity
-        return 1.0 - cosine(exp_norm, pred_norm)
+        return float(np.dot(exp_norm, pred_norm))
 
     def _calculate_spearman_correlation(
         self, exp_vector: np.ndarray, pred_vector: np.ndarray
