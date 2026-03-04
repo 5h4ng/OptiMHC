@@ -280,11 +280,11 @@ def generate_features(psms, config):
                     else:
                         logger.info("MS data file information is not provided.")
                         logger.info(
-                            "Trying to use the default pattern: (.+?)\.\d+\.\d+\.\d+ to extract mzML file names from spectrum IDs."
+                            r"Trying to use the default pattern: (.+?)\.\d+\.\d+\.\d+ to extract mzML file names from spectrum IDs."
                         )
                         for spectrum_id in spectrum_ids:
                             mz_file_names.append(
-                                re.match("(.+?)\.\d+\.\d+\.\d+", spectrum_id).group(1)
+                                re.match(r"(.+?)\.\d+\.\d+\.\d+", spectrum_id).group(1)
                             )
 
                 mz_file_paths = [
