@@ -30,11 +30,13 @@ def rescore(
     psms : PsmContainer
         A PsmContainer object containing PSM data.
     model : object, optional
-        A trained model for rescoring PSMs.
+        An untrained mokapot-compatible model (e.g. PercolatorModel, XGBoostPercolatorModel).
+        mokapot.brew trains it internally across cross-validation folds. If None, mokapot
+        uses its default PercolatorModel.
     rescoring_features : List[str], optional
         A list of feature names to use for rescoring.
     test_fdr : float, optional
-        The FDR threshold for testing the model. Default is 0.01.
+        The FDR threshold used to evaluate and report results after training. Default is 0.01.
     **kwargs : dict
         Additional keyword arguments for mokapot.brew.
 
@@ -47,19 +49,18 @@ def rescore(
           (i.e. PSMs, peptides) when assessed using the learned score. If a list, they will be
           in the same order as provided in the psms parameter.
         - list of Model objects:
-          The learned Model objects, one for each fold.
+          The trained Model objects, one for each cross-validation fold.
 
     Notes
     -----
     This function:
-    1. Converts the PsmContainer to a mokapot dataset
-    2. Runs mokapot.brew with the specified parameters
-    3. Returns the results and models
+    1. Converts the PsmContainer to a mokapot LinearPsmDataset
+    2. Passes the dataset and untrained model to mokapot.brew, which trains across folds
+    3. Returns the per-fold confidence results and trained models
     """
     psms = convert_to_mokapot_dataset(psms, rescoring_features=rescoring_features)
     logger.info("Rescoring PSMs with mokapot.")
-    model_arg = [model] if model is not None else None
-    results, models = mokapot.brew(psms, model=model_arg, test_fdr=test_fdr, **kwargs)
+    results, models = mokapot.brew(psms, model=model, test_fdr=test_fdr, **kwargs)
     return results, models
 
 
