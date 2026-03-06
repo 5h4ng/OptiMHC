@@ -58,7 +58,7 @@ def rescore(
     """
     psms = convert_to_mokapot_dataset(psms, rescoring_features=rescoring_features)
     logger.info("Rescoring PSMs with mokapot.")
-    results, models = mokapot.brew(psms, model=model, test_fdr=test_fdr, **kwargs)
+    results, models = mokapot.brew(psms, model=[model], test_fdr=test_fdr, **kwargs)
     return results, models
 
 

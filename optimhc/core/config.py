@@ -20,7 +20,7 @@ DEFAULT_CONFIG = {
     "removePreNxtAA": False,
     "showProgress": True,
     "logLevel": "INFO",
-    "rescore": {"testFDR": 0.01, "model": "Percolator", "numJobs": 1},
+    "rescore": {"testFDR": 0.01, "trainFDR": 0.01, "model": "Percolator", "numJobs": 1},
 }
 
 
