@@ -71,9 +71,10 @@ Rescore parameters control how the rescoring step is executed and include:
 
 | Parameter | Type    | Example      | Description                                                                                                                                                                                 |
 | --------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `testFDR` | Float   | `0.01`       | The false-discovery rate threshold at which to evaluate the learned models.                                                                                                                 |
-| `model`   | String  | `Percolator` | Model to use for rescoring (valid options include `Percolator`, `XGBoost`, or `RandomForest`).                                                                                              |
-| `numJobs` | Integer | `4`          | The number of parallel jobs to run. This value is passed to Scikit-learn's n_jobs parameter to control parallelism for model training or scoring. Set to -1 to use all available CPU cores. |
+| `testFDR`  | Float   | `0.01`       | The false-discovery rate threshold at which to evaluate the learned models and report final results.                                                                                         |
+| `trainFDR` | Float   | `0.01`       | The FDR threshold used during model training to select positive PSMs in each iteration. Increase this value (e.g. `0.05`) if training fails with "No PSMs found below the eval_fdr" on challenging datasets. |
+| `model`    | String  | `Percolator` | Model to use for rescoring (valid options include `Percolator`, `XGBoost`, or `RandomForest`).                                                                                              |
+| `numJobs`  | Integer | `4`          | The number of parallel jobs to run. This value is passed to Scikit-learn's n_jobs parameter to control parallelism for model training or scoring. Set to -1 to use all available CPU cores. |
 
 #### Example YAML Configuration
 
