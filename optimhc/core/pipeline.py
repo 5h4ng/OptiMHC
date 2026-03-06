@@ -73,6 +73,7 @@ class Pipeline:
         self.save_models = self.config.get("saveModels", True)
         self.to_flashlfq = self.config.get("toFlashLFQ", True)
         self.test_fdr = self.config.get("rescore", {}).get("testFDR", 0.01)
+        self.train_fdr = self.config.get("rescore", {}).get("trainFDR", 0.01)
         self.model_type = self.config.get("rescore", {}).get("model", "Percolator")
         self.n_jobs = self.config.get("rescore", {}).get("numJobs", 1)
 
@@ -143,7 +144,6 @@ class Pipeline:
             Number of parallel jobs.
         test_fdr : float, optional
             FDR threshold.
-        rescoring_features : list, optional
             List of features to use for rescoring.
 
         Returns
@@ -161,14 +161,15 @@ class Pipeline:
         model_type = model_type if model_type is not None else self.model_type
         n_jobs = n_jobs if n_jobs is not None else self.n_jobs
 
+        train_fdr = getattr(self, "train_fdr", 0.01)
         if model_type == "XGBoost":
-            model = XGBoostPercolatorModel(n_jobs=n_jobs)
+            model = XGBoostPercolatorModel(train_fdr=train_fdr, n_jobs=n_jobs)
         elif model_type == "RandomForest":
-            model = RandomForestPercolatorModel(n_jobs=n_jobs)
+            model = RandomForestPercolatorModel(train_fdr=train_fdr, n_jobs=n_jobs)
         elif model_type == "Percolator":
-            model = PercolatorModel(n_jobs=n_jobs)
+            model = PercolatorModel(train_fdr=train_fdr, n_jobs=n_jobs)
         else:
-            model = PercolatorModel(n_jobs=n_jobs)
+            model = PercolatorModel(train_fdr=train_fdr, n_jobs=n_jobs)
 
         kwargs = {}
         if rescoring_features is not None:
