@@ -26,11 +26,6 @@ def cli():
     pass
 
 
-def parse_cli_config(**kwargs):
-    # Remove None values and build a config dict
-    return {k: v for k, v in kwargs.items() if v is not None and v != ()}
-
-
 @cli.command()
 @click.option(
     "--config",
@@ -129,7 +124,7 @@ def pipeline(
     if visualization is not None:
         pipeline_config["visualization"] = visualization
     if numprocesses:
-        pipeline_config["numProcess"] = numprocesses
+        pipeline_config["numProcesses"] = numprocesses
     if allele:
         pipeline_config["allele"] = list(allele)
     if loglevel:

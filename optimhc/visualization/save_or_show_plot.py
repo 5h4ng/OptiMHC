@@ -12,3 +12,4 @@ def save_or_show_plot(save_path, logger, tight_layout=True):
         logger.info(f"Plot saved to {save_path}")
     else:
         plt.show()
+    plt.close("all")

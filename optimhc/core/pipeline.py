@@ -281,6 +281,8 @@ class Pipeline:
         bool
             True if experiment succeeded, False otherwise.
         """
+        results = None
+        models = None
         try:
             os.makedirs(exp_dir, exist_ok=True)
 
@@ -333,12 +335,8 @@ class Pipeline:
             return False
 
         finally:
-            # Explicit resource release to free up memory after each experiment
-            try:
-                del results
-                del models
-            except Exception:
-                pass
+            del results
+            del models
             gc.collect()
 
     def run(self):
@@ -382,8 +380,6 @@ class Pipeline:
 
         psms = self.read_input()
         psms = self._generate_features(psms)
-
-        # Save the generated pin file for reference
         pin_path = os.path.join(self.output_dir, f"optimhc.{self.experiment}.pin")
         psms.write_pin(pin_path)
         fig_summary_dir = os.path.join(self.output_dir, "figures")
