@@ -297,15 +297,7 @@ class MHCflurryFeatureGenerator(BaseFeatureGenerator):
         ]
         if features_df.isna().sum().sum() > 0:
             logger.warning("NaN values found in the generated features.")
-        return features_df[
-            [
-                "Peptide",
-                "mhcflurry_affinity",
-                "mhcflurry_processing_score",
-                "mhcflurry_presentation_score",
-                "mhcflurry_presentation_percentile",
-            ]
-        ]
+        return features_df
 
     def get_best_allele(self) -> pd.DataFrame:
         """

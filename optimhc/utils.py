@@ -1,5 +1,6 @@
 # utils.py
 
+import re
 from logging import getLogger
 from pathlib import Path
 from typing import List
@@ -80,8 +81,6 @@ def strip_flanking_and_charge(peptide: str) -> str:
     This function removes any amino acids before the first '.' and after the last '.'
     in the peptide sequence.
     """
-    import re
-
     peptide = re.sub(r"^[^.]*\.|\.[^.]*$", "", peptide)
 
     # Some PIN may have charge state at the end of the peptide, e.g., R.RRVEHHDHAVVSGR4.L
@@ -120,8 +119,6 @@ def remove_modifications(peptide: str, keep_modification=None) -> str:
     If keep_modification is provided, only those specific modifications will be
     preserved in the output sequence.
     """
-    import re
-
     if keep_modification is None:
         return re.sub(r"\[.*?\]", "", peptide)
     else:

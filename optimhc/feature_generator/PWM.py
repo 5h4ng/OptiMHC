@@ -284,7 +284,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
         logger.debug(f"Default PWM file paths set for alleles: {self.alleles}")
         return pwm_files
 
-    def _most_conserved_postions(self, pwm: pd.DataFrame, n: int = 2) -> List[int]:
+    def _most_conserved_positions(self, pwm: pd.DataFrame, n: int = 2) -> List[int]:
         """
         Find the n most conserved positions in the PWM.
 
@@ -635,7 +635,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                     min_mer = min(self.pwms[allele].keys())
                     max_mer = max(self.pwms[allele].keys())
                     for mer_len in range(min_mer, max_mer + 1):
-                        anchor_dict[mer_len] = self._most_conserved_postions(
+                        anchor_dict[mer_len] = self._most_conserved_positions(
                             self.pwms[allele][mer_len], self.anchors
                         )
                     logger.info(f"Most conserved positions for allele {allele}: {anchor_dict}")
