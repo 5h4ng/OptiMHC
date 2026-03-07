@@ -130,6 +130,6 @@ class TestDefaultConfig:
         assert DEFAULT_CONFIG["inputType"] == "pepxml"
         assert DEFAULT_CONFIG["outputDir"] == "./results"
         assert DEFAULT_CONFIG["decoyPrefix"] == "DECOY_"
-        assert DEFAULT_CONFIG["numProcess"] == 4
+        assert DEFAULT_CONFIG["numProcesses"] == 4
         assert DEFAULT_CONFIG["rescore"]["testFDR"] == 0.01
         assert DEFAULT_CONFIG["rescore"]["model"] == "Percolator"
