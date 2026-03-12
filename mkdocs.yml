@@ -1,4 +1,4 @@
-site_name: optiMHC
+site_name: OptiMHC
 site_description: A high-performance rescoring pipeline for immunopeptidomics data to significantly enhance peptide identification performance
 site_author: Zixiang Shang
 repo_url: https://github.com/5h4ng/OptiMHC
@@ -24,6 +24,7 @@ theme:
     - navigation.tracking
     - navigation.tabs
     - navigation.sections
+    - navigation.indexes
     - navigation.top
     - search.suggest
     - search.highlight
@@ -59,11 +60,34 @@ markdown_extensions:
       generic: true
 
 extra_javascript:
+  - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 nav:
   - Home: index.md
-  - Installation: installation.md
-  - Usage: usage.md
-  - API Reference: api.md
-  - Examples: examples.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - Tutorial:
+    - Overview: tutorial/index.md
+    - Examples: tutorial/examples.md
+    - Pipeline Workflow: tutorial/workflow.md
+    - Features:
+      - Overview: tutorial/features/index.md
+      - Original Features: tutorial/features/original.md
+      - Basic Features: tutorial/features/basic.md
+      - Spectral Similarity: tutorial/features/spectral-similarity.md
+      - Retention Time Deviation: tutorial/features/rt-deviation.md
+      - Antigen Presentation Scores: tutorial/features/antigen-presentation.md
+      - PWM Score: tutorial/features/pwm.md
+      - Overlapping Peptide Score: tutorial/features/overlapping.md
+  - API Reference:
+    - Overview: api/index.md
+    - Core: api/core.md
+    - I/O: api/io.md
+    - Feature Generators: api/features.md
+    - Rescoring: api/rescore.md
+    - Visualization: api/visualization.md
+    - CLI: api/cli.md
+  - Development:
+    - development/index.md

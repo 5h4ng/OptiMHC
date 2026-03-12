@@ -1,0 +1,102 @@
+# PWM Score
+
+The **PWM** feature (`name: PWM`) scores peptides against Position Weight Matrices derived from known MHC ligand data. PWM scoring is a classical, fast, and interpretable method for estimating MHC binding potential.
+
+**Source name:** `PWM`
+
+## Output Columns
+
+The number and names of output columns depend on the MHC class and alleles.
+
+### MHC Class I
+
+| Column | Description |
+|---|---|
+| `PWM_Score_{allele}` | Total PWM score for the peptide |
+| `Anchor_Score_{allele}` | PWM score at the most conserved (anchor) positions only |
+
+### MHC Class II
+
+| Column | Description |
+|---|---|
+| `PWM_Score_{allele}` | Best 9-mer core binding score |
+| `N_Flank_PWM_Score_{allele}` | Score for the N-terminal flanking residues |
+| `C_Flank_PWM_Score_{allele}` | Score for the C-terminal flanking residues |
+
+## Computation
+
+### MHC Class I Scoring
+
+For Class I, a length-specific PWM is loaded for each allele and peptide length. Each entry \( W_{a,j} \) represents the log-odds weight for amino acid \( a \) at position \( j \).
+
+**Total PWM score.** The PWM score \( S \) for a peptide of length \( L \) with amino acid \( a_j \) at position \( j \) is:
+
+\[
+S = \sum_{j=1}^{L} W_{a_j, j}
+\]
+
+**Anchor score.** The anchor positions are identified as the \( n \) most conserved positions in the PWM (default \( n = 2 \)). Conservation is measured by the positional Shannon entropy \( H_j \):
+
+\[
+H_j = -\sum_{a \in \mathcal{A}} p_{a,j} \log_2(p_{a,j})
+\]
+
+where the probabilities are derived from the PWM weights:
+
+\[
+p_{a,j} = \frac{2^{W_{a,j}}}{\sum_{a'} 2^{W_{a',j}}}
+\]
+
+The \( n \) positions with the **lowest** \( H_j \) (highest conservation) are selected as anchor positions. The anchor score \( S_\mathrm{anc} \) is:
+
+\[
+S_\mathrm{anc} = \sum_{j \in \mathcal{J}_\mathrm{anc}} W_{a_j, j}
+\]
+
+where \( \mathcal{J}_\mathrm{anc} \) is the set of anchor positions.
+
+### MHC Class II Scoring
+
+MHC Class II molecules bind peptides through a 9-mer binding core embedded within a longer peptide. The PWM is always 9 positions long.
+
+**Core binding score.** A sliding window scans all possible 9-mer frames, and the frame with the highest score is selected. Let \( s \) be the starting position:
+
+\[
+S = \max_{s} \sum_{j=1}^{9} W_{a_{s+j}, j}
+\]
+
+**Flanking scores.** Once the best core position is determined, the flanking residues are scored:
+
+- **N-terminal flank**: up to 3 residues immediately preceding the binding core. If fewer than 3 residues are available, the sequence is padded with `X` (unknown amino acid).
+- **C-terminal flank**: up to 3 residues immediately following the binding core, similarly padded.
+
+Each flank is scored against its own 3-position PWM. Let \( W^{(N)} \) and \( W^{(C)} \) denote the N-flank and C-flank matrices. The flanking scores \( S_N \) and \( S_C \) are:
+
+\[
+S_N = \sum_{j=1}^{3} W^{(N)}_{a_j, j}, \quad
+S_C = \sum_{j=1}^{3} W^{(C)}_{a_j, j}
+\]
+
+### Preprocessing
+
+- Flanking amino acids are stripped and modifications are removed.
+- Selenocysteine (U) is replaced with cysteine (C).
+- Peptides for which no matching PWM is available (e.g., unsupported length for Class I) receive median-imputed values.
+
+## Configuration
+
+```yaml
+featureGenerator:
+  - name: PWM
+    params:
+      class: I           # "I" or "II"
+      anchors: 2         # Number of anchor positions (Class I only)
+```
+
+| Parameter | Default | Description |
+|---|---|---|
+| `class` | *(required)* | MHC class: `"I"` or `"II"` |
+| `anchors` | `2` | Number of anchor positions for anchor score computation (Class I only) |
+
+The alleles are taken from the top-level `allele` configuration.
+

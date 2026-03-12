@@ -1,6 +1,8 @@
 # OptiMHC
 
-**OptiMHC** is an optimum rescoring pipeline for immunopeptidomics data. It enhances peptide identification by integrating multiple feature generators and machine learning-based rescoring.
+**An optimum rescoring pipeline for immunopeptidomics data that significantly enhances peptide identification performance.**
+
+OptiMHC integrates multiple rescoring features with machine learning-based rescoring to maximize the number of confidently identified peptides from mass spectrometry experiments.
 
 ## Quick Start
 
