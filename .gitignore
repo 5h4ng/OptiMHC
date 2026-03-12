@@ -89,8 +89,8 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
+# MkDocs build output
+site/
 
 # PyBuilder
 .pybuilder/
@@ -197,6 +197,10 @@ cython_debug/
 .cursor-state/
 # Cursor rules directory
 .cursor/rules/
+
+### Claude Code ###
+.claude/
+CLAUDE.md
 
 ### Python Patch ###
 # Poetry local configuration file - https://python-poetry.org/docs/configuration/#local-configuration
