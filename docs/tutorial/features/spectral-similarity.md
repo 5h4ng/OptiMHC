@@ -1,6 +1,6 @@
 # Spectral Similarity
 
-The **SpectralSimilarity** feature (`name: SpectralSimilarity`) compares experimentally observed MS2 spectra against theoretical spectra predicted by a deep learning model served via [Koina](https://koina.wilhelmlab.org/). The similarity between observed and predicted fragmentation patterns is a powerful indicator of correct peptide-spectrum matches.
+The **SpectralSimilarity** feature (`name: SpectralSimilarity`) compares experimentally observed MS2 spectra against theoretical spectra predicted by a deep learning model served via [Koina](https://koina.proteomicsdb.org/). Koina is an open-source, web-accessible model repository that democratizes access to machine learning models for proteomics research, enabling remote execution of prediction models via standard HTTP/S requests without requiring specialized hardware ([Lautenbacher *et al.*, Nature Communications, 2025](https://doi.org/10.1038/s41467-025-64870-5)). The similarity between observed and predicted fragmentation patterns is a powerful indicator of correct peptide-spectrum matches.
 
 **Source name:** `SpectralSimilarity`
 
@@ -94,6 +94,8 @@ The MSE is computed on L2-normalized vectors. Let \( \hat{e}_i = e_i / \|\mathbf
 
 #### Unweighted Entropy Similarity
 
+The unweighted entropy similarity is based on the concept of spectral entropy introduced by Li *et al.* ([Nature Methods, 2021](https://doi.org/10.1038/s41592-021-01331-z)).
+
 First, normalize intensities to probability distributions \( \mathbf{q}^{(e)} \) and \( \mathbf{q}^{(p)} \):
 
 \[
@@ -147,4 +149,4 @@ featureGenerator:
 
 ## Requirements
 
-This feature requires **mzML files** (raw spectra) and access to a **Koina server** — either the [public endpoint](https://koina.wilhelmlab.org/) or a self-hosted [Triton Inference Server](https://github.com/wilhelm-lab/koina).
+This feature requires access to a **Koina server** — either the [public endpoint](https://koina.proteomicsdb.org/) or a self-hosted [Triton Inference Server](https://github.com/wilhelm-lab/koina).

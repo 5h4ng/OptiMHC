@@ -60,7 +60,7 @@ For a PSM with charge 2, `charge_2 = 1` and all other charge columns are 0. This
 
 ### Log Transformation of P-values and E-values
 
-Many search engine scores span several orders of magnitude (e.g., E-values from \( 10^{-20} \) to \( 10^{2} \)). OptiMHC applies automatic log-transformation to compress these ranges.
+Many search engine scores span several orders of magnitude (e.g., E-values from \( 10^{-20} \) to \( 10^{2} \)). Following the approach used in mokapot, OptiMHC applies automatic log-transformation to compress these ranges into a scale more suitable for machine learning models.
 
 **Scientific notation values:** If values contain scientific notation and span 4 or more orders of magnitude, the log transform for a value \( x = a \times 10^{b} \) is:
 

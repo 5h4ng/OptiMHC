@@ -10,28 +10,18 @@ OptiMHC integrates three external tools for predicting MHC binding affinity and 
 
 ### Output Columns
 
-=== "Best allele mode (default)"
-
-    | Column | Description |
-    |---|---|
-    | `netmhcpan_best_score` | Binding score for the best allele |
-    | `netmhcpan_best_affinity` | Predicted binding affinity (nM) for the best allele |
-    | `netmhcpan_best_percentile_rank` | Percentile rank for the best allele |
-
-=== "All alleles mode"
-
-    | Column | Description |
-    |---|---|
-    | `netmhcpan_score_{allele}` | Binding score per allele |
-    | `netmhcpan_affinity_{allele}` | Predicted binding affinity (nM) per allele |
-    | `netmhcpan_percentile_rank_{allele}` | Percentile rank per allele |
+| Column | Description |
+|---|---|
+| `netmhcpan_best_score` | Binding score for the best allele |
+| `netmhcpan_best_affinity` | Predicted binding affinity (nM) for the best allele |
+| `netmhcpan_best_percentile_rank` | Percentile rank for the best allele |
 
 ### Computation
 
-1. **Preprocess** peptide sequences: strip flanking amino acids, remove modifications, replace selenocysteine (U) with cysteine (C).
+1. **Preprocess** peptide sequences: strip flanking amino acids and remove modifications.
 2. **Filter** peptides to length 8–30 (the supported range for NetMHCpan).
 3. **Predict** binding for all peptide-allele combinations using `NetMHCpan 4.1`.
-4. **Best allele selection** (default mode): for each peptide, select the allele \( a^* \) with the minimum percentile rank \( r \):
+4. **Best allele selection**: for each peptide, select the allele \( a^* \) with the minimum percentile rank \( r \):
 
 \[
 a^* = \arg\min_{a} \; r(\text{peptide}, a)
@@ -44,8 +34,6 @@ Missing values (peptides outside the length range) are filled with the column me
 ```yaml
 featureGenerator:
   - name: NetMHCpan
-    params:
-      mode: best       # "best" (default) or "all"
 ```
 
 !!! warning "External installation required"
@@ -61,28 +49,18 @@ featureGenerator:
 
 ### Output Columns
 
-=== "Best allele mode (default)"
-
-    | Column | Description |
-    |---|---|
-    | `netmhciipan_best_score` | Binding score for the best allele |
-    | `netmhciipan_best_affinity` | Predicted binding affinity (nM) for the best allele |
-    | `netmhciipan_best_percentile_rank` | Percentile rank for the best allele |
-
-=== "All alleles mode"
-
-    | Column | Description |
-    |---|---|
-    | `netmhciipan_score_{allele}` | Binding score per allele |
-    | `netmhciipan_affinity_{allele}` | Predicted binding affinity (nM) per allele |
-    | `netmhciipan_percentile_rank_{allele}` | Percentile rank per allele |
+| Column | Description |
+|---|---|
+| `netmhciipan_best_score` | Binding score for the best allele |
+| `netmhciipan_best_affinity` | Predicted binding affinity (nM) for the best allele |
+| `netmhciipan_best_percentile_rank` | Percentile rank for the best allele |
 
 ### Computation
 
-1. **Preprocess** peptide sequences: strip flanking amino acids, remove modifications, replace U with C.
+1. **Preprocess** peptide sequences: strip flanking amino acids and remove modifications.
 2. **Filter** peptides to length 9–50 (the supported range for NetMHCIIpan).
 3. **Predict** binding for all peptide-allele combinations using `NetMHCIIpan 4.3 BA`.
-4. **Best allele selection** (default mode): for each peptide, select the allele with the minimum percentile rank.
+4. **Best allele selection**: for each peptide, select the allele with the minimum percentile rank.
 
 Missing values are filled with the column median.
 
@@ -91,8 +69,6 @@ Missing values are filled with the column median.
 ```yaml
 featureGenerator:
   - name: NetMHCIIpan
-    params:
-      mode: best       # "best" (default) or "all"
 ```
 
 !!! warning "External installation required"
@@ -117,7 +93,7 @@ featureGenerator:
 
 ### Computation
 
-1. **Preprocess** peptide sequences: strip flanking amino acids, remove modifications, replace U with C.
+1. **Preprocess** peptide sequences: strip flanking amino acids and remove modifications.
 2. **Filter** peptides to length 8–15 (the supported range for MHCflurry).
 3. **Predict** using `Class1PresentationPredictor`, which returns:
     - **Affinity** — predicted IC50 binding affinity in nM.

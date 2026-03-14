@@ -56,7 +56,7 @@ The signed difference \( \Delta t \), its absolute value \( |\Delta t| \), and t
 R_t = \frac{\min(t_\mathrm{pred},\; t_\mathrm{obs})}{\max(t_\mathrm{pred},\; t_\mathrm{obs})}
 \]
 
-\( R_t \) is bounded in \((0, 1]\) and equals 1 when the predicted and observed times are identical. This formulation (from [DeepRescore](https://doi.org/10.1002/pmic.202000156)) is robust to differences in retention time scale across experiments.
+\( R_t \) is bounded in \((0, 1]\) and equals 1 when the predicted and observed times are identical.
 
 ### Missing Values
 

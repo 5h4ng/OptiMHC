@@ -30,7 +30,9 @@ Most features share common preprocessing steps:
 
 - **Strip flanking amino acids** — remove the preceding and next amino acid notation (e.g., `K.PEPTIDE.R` becomes `PEPTIDE`).
 - **Remove modifications** — strip bracketed mass annotations (e.g., `PEPTM[147.035]IDE` becomes `PEPTMIDE`).
-- **Selenocysteine handling** — replace `U` (selenocysteine) with `C` (cysteine) for compatibility with prediction tools.
+
+??? note "Selenocysteine (U) handling"
+    Selenocysteine (`U`) is an extremely rare amino acid that most prediction tools do not support. During preprocessing, `U` is automatically replaced with cysteine (`C`) to ensure compatibility with external tools such as Koina, DeepLC, MHCflurry, NetMHCpan, and the PWM scoring matrices.
 
 ## Missing Value Handling
 

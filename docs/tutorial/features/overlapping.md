@@ -1,6 +1,10 @@
 # Overlapping Peptide Score
 
-The **OverlappingPeptide** feature (`name: OverlappingPeptide`) exploits the observation that true MHC ligands often appear in overlapping clusters — multiple peptides derived from the same protein region that share sequence overlaps. By constructing an overlap graph and assembling peptides into contigs, this feature quantifies how well each peptide is supported by its neighbors.
+The **OverlappingPeptide** feature (`name: OverlappingPeptide`) is designed for detecting **ladder-like presentation hotspots** — genomic regions where the MHC presentation machinery repeatedly samples overlapping peptides, producing a characteristic nested/ladder pattern in the immunopeptidome.
+
+The method is inspired by the **Overlap-Layout-Consensus (OLC)** algorithm from genome assembly. We adapt the first two stages — overlap detection and layout (contig construction) — to build an overlap graph of peptide sequences and assemble them into contigs. 
+
+The core idea: if multiple peptides within the same contig are confidently identified, then other peptides in the same group are also likely to be genuine MHC ligands.
 
 **Source name:** `OverlappingPeptide`
 
@@ -17,7 +21,7 @@ The **OverlappingPeptide** feature (`name: OverlappingPeptide`) exploits the obs
 
 ### Step 1: Preprocessing and Filtering
 
-Peptide sequences are preprocessed (flanking AA removal, modification removal, U→C replacement) and then filtered by length and entropy thresholds.
+Peptide sequences are preprocessed (flanking AA removal, modification removal) and then filtered by length and entropy thresholds.
 
 ### Step 2: Redundancy Removal
 
@@ -102,4 +106,3 @@ featureGenerator:
 
 !!! tip
     For MHC Class I, typical settings are `minLength: 7`, `maxLength: 20`, `minOverlapLength: 7`. For MHC Class II, use wider ranges like `minLength: 9`, `maxLength: 50`, `minOverlapLength: 8` to accommodate longer peptides.
-
