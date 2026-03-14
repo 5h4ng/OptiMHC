@@ -51,12 +51,6 @@ uv run pre-commit install              # Install hooks
 uv run pre-commit run --all-files      # Run all hooks manually
 ```
 
-## Code Style
-
-- **Docstrings** — use NumPy-style docstrings throughout.
-- **Heavy optional imports** — import `deeplc`, `mhcflurry`, `mhctools`, `koinapy` **inside functions**, not at module top-level, to keep CLI startup fast.
-- **Feature generators** — inherit from `BaseFeatureGenerator` and implement `feature_columns`, `id_column`, and `generate_features()`.
-
 ## Building Documentation
 
 ```bash
