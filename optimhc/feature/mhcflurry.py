@@ -5,7 +5,7 @@ import pandas as pd
 from mhcflurry import Class1PresentationPredictor
 
 from optimhc import utils
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.base_feature_generator import BaseFeatureGenerator
 
 logger = logging.getLogger(__name__)
 

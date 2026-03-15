@@ -1,5 +1,3 @@
-# feature_generator/overlapping_peptide.py
-
 import logging
 from collections import defaultdict
 from typing import Dict, List, Tuple, Union
@@ -11,7 +9,7 @@ from scipy.stats import entropy
 from tqdm import tqdm
 
 from optimhc import utils
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.base_feature_generator import BaseFeatureGenerator
 from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)

@@ -1,5 +1,3 @@
-# feature_generator/spectral_similarity.py
-
 import logging
 from typing import Dict, List, Optional, Tuple
 
@@ -8,8 +6,8 @@ import pandas as pd
 from koinapy import Koina
 
 from optimhc import utils
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
-from optimhc.feature_generator.numba_utils import align_peaks, compute_similarity_features
+from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.numba_utils import align_peaks, compute_similarity_features
 from optimhc.parser import extract_mzml_data
 
 logger = logging.getLogger(__name__)

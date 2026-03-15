@@ -1,4 +1,3 @@
-# feature_generator/DeepLC.py
 # TODO: Use koina for prediction
 
 import logging
@@ -9,7 +8,7 @@ import pandas as pd
 from deeplc import DeepLC
 
 from optimhc import utils
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.base_feature_generator import BaseFeatureGenerator
 from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)

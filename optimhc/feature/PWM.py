@@ -1,5 +1,3 @@
-# feature_generator/PWM.py
-
 import logging
 import os
 from typing import Dict, List, Optional, Tuple, Union
@@ -8,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from optimhc import utils
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.base_feature_generator import BaseFeatureGenerator
 
 logger = logging.getLogger(__name__)
 

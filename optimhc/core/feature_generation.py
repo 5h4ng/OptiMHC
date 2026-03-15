@@ -10,12 +10,12 @@ import logging
 import os
 import re
 
-from optimhc.feature_generator.netMHCIIpan import NetMHCIIpanFeatureGenerator
+from optimhc.feature.netMHCIIpan import NetMHCIIpanFeatureGenerator
 
 # The reason why we need to import the feature generators here is that
 # the package 'mhctools' affect the logging configuration of optiMHC.
 # TODO: find a better way to handle this.
-from optimhc.feature_generator.netMHCpan import NetMHCpanFeatureGenerator
+from optimhc.feature.netMHCpan import NetMHCpanFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ def generate_features(psms, config):
             generator_params = generator_config.get("params", {})
 
             if generator_type == "OverlappingPeptide":
-                from optimhc.feature_generator.overlapping_peptide import (
+                from optimhc.feature.overlapping_peptide import (
                     OverlappingPeptideFeatureGenerator,
                     assign_brother_aggregated_feature,
                 )
@@ -108,7 +108,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "Basic":
-                from optimhc.feature_generator.basic import BasicFeatureGenerator
+                from optimhc.feature.basic import BasicFeatureGenerator
 
                 basic_generator = BasicFeatureGenerator(
                     psms.psms[psms.peptide_column].tolist(),
@@ -124,7 +124,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "PWM":
-                from optimhc.feature_generator.PWM import PWMFeatureGenerator
+                from optimhc.feature.PWM import PWMFeatureGenerator
 
                 pwm_generator = PWMFeatureGenerator(
                     unique_peptides,
@@ -145,7 +145,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "MHCflurry":
-                from optimhc.feature_generator.mhcflurry import (
+                from optimhc.feature.mhcflurry import (
                     MHCflurryFeatureGenerator,
                 )
 
@@ -167,7 +167,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "NetMHCpan":
-                # from optimhc.feature_generator.netMHCpan import NetMHCpanFeatureGenerator
+                # from optimhc.feature.netMHCpan import NetMHCpanFeatureGenerator
                 netmhcpan_generator = NetMHCpanFeatureGenerator(
                     unique_peptides,
                     alleles=allele,
@@ -189,7 +189,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "NetMHCIIpan":
-                # from optimhc.feature_generator.netMHCIIpan import NetMHCIIpanFeatureGenerator
+                # from optimhc.feature.netMHCIIpan import NetMHCIIpanFeatureGenerator
                 netmhciipan_generator = NetMHCIIpanFeatureGenerator(
                     unique_peptides,
                     alleles=allele,
@@ -211,7 +211,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "DeepLC":
-                from optimhc.feature_generator.DeepLC import DeepLCFeatureGenerator
+                from optimhc.feature.DeepLC import DeepLCFeatureGenerator
 
                 deeplc_generator = DeepLCFeatureGenerator(
                     psms,
@@ -235,7 +235,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "SpectralSimilarity":
-                from optimhc.feature_generator.spectral_similarity import (
+                from optimhc.feature.spectral_similarity import (
                     SpectralSimilarityFeatureGenerator,
                 )
 

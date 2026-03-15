@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from optimhc.feature_generator.spectral_similarity import SpectralSimilarityFeatureGenerator
+from optimhc.feature.spectral_similarity import SpectralSimilarityFeatureGenerator
 
 
 def _make_generator(tolerance_ppm=20.0, top_n=36):

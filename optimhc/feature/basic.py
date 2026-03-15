@@ -1,5 +1,3 @@
-# feature_generator/basic.py
-
 import logging
 from typing import List
 
@@ -7,7 +5,7 @@ import pandas as pd
 from scipy.stats import entropy  # Import entropy from scipy
 
 from optimhc import utils
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.base_feature_generator import BaseFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
