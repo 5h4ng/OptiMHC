@@ -55,9 +55,7 @@ class BaseFeatureGenerator(ABC):
             Generator-specific parameters from
             ``config["featureGenerator"][i]["params"]``.
         """
-        raise NotImplementedError(
-            f"{cls.__name__} must implement from_config()"
-        )
+        raise NotImplementedError(f"{cls.__name__} must implement from_config()")
 
     def apply(self, psms: PsmContainer, source: str) -> None:
         """Generate features and merge them into the PsmContainer.

@@ -848,12 +848,8 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         else:
             logger.info("Spectrum ID pattern is not provided.")
             if psms.ms_data_file_column is not None:
-                logger.info(
-                    f"Trying to extract mzML file names from {psms.ms_data_file_column}"
-                )
-                logger.info(
-                    f"MS data file format: {set(psms.psms[psms.ms_data_file_column])}"
-                )
+                logger.info(f"Trying to extract mzML file names from {psms.ms_data_file_column}")
+                logger.info(f"MS data file format: {set(psms.psms[psms.ms_data_file_column])}")
                 for ms_data_file in psms.psms[psms.ms_data_file_column]:
                     mz_file_basename = os.path.basename(ms_data_file).split(".")[0]
                     if mz_file_basename.endswith(".mzML"):
@@ -869,13 +865,9 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
                     "to extract mzML file names from spectrum IDs."
                 )
                 for spectrum_id in spectrum_ids:
-                    mz_file_names.append(
-                        re.match(r"(.+?)\.\d+\.\d+\.\d+", spectrum_id).group(1)
-                    )
+                    mz_file_names.append(re.match(r"(.+?)\.\d+\.\d+\.\d+", spectrum_id).group(1))
 
-        mz_file_paths = [
-            os.path.join(mzml_dir, f"{mz_file}.mzML") for mz_file in mz_file_names
-        ]
+        mz_file_paths = [os.path.join(mzml_dir, f"{mz_file}.mzML") for mz_file in mz_file_names]
         for mz_file_path in set(mz_file_paths):
             if not os.path.exists(mz_file_path):
                 logger.error(f"mzML file not found: {mz_file_path}")

@@ -25,8 +25,7 @@ class FeatureGeneratorFactory:
         """Return the generator class registered under *name*."""
         if name not in self._registry:
             raise ValueError(
-                f"Unknown feature generator: '{name}'. "
-                f"Available: {sorted(self._registry.keys())}"
+                f"Unknown feature generator: '{name}'. Available: {sorted(self._registry.keys())}"
             )
         return self._registry[name]
 
