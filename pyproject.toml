@@ -34,13 +34,6 @@ dependencies = [
     "numba>=0.64.0",
 ]
 
-[project.optional-dependencies]
-gui = [
-    "streamlit>=1.24.0",
-    "plotly>=5.13.0",
-    "watchdog>=3.0.0",
-]
-
 [dependency-groups]
 dev = [
     "pytest>=8.4.0",
@@ -62,7 +55,7 @@ include = ["optimhc*"]
 optimhc = ["PWMs*"]
 
 [tool.ruff]
-exclude = ["docs", "examples", "optimhc/gui/"]
+exclude = ["docs", "examples"]
 line-length = 99
 target-version = "py311"
 

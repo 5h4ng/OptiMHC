@@ -20,7 +20,7 @@ uv sync --locked --group dev
 Alternatively, using pip:
 
 ```bash
-pip install -e ".[gui]"
+pip install -e .
 pip install pytest ruff pre-commit
 ```
 
@@ -42,7 +42,7 @@ uv run ruff format .         # Format
 uv run ruff format --check . # Check without modifying
 ```
 
-Configuration: `line-length = 99`, rules `["E", "F", "I"]` (pycodestyle errors, pyflakes, isort). `E501` (line too long) is ignored. Ruff excludes `docs/`, `examples/`, and `optimhc/gui/`.
+Configuration: `line-length = 99`, rules `["E", "F", "I"]` (pycodestyle errors, pyflakes, isort). `E501` (line too long) is ignored. Ruff excludes `docs/` and `examples/`.
 
 ## Pre-commit Hooks
 

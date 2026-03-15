@@ -240,12 +240,6 @@ Here are some examples:
 
 </details>
 
-### GUI (Experimental)
-
-```bash
-optimhc gui
-```
-
 ### Full CLI Help
 
 ```bash

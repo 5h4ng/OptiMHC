@@ -71,7 +71,4 @@ netMHCIIpan -v        # Should print the version number
 optimhc --help
 ```
 
-You should see the available commands: `pipeline`, `experiment`, and `gui`.
-
-!!! note "GUI"
-    The Streamlit GUI is currently under development. <!-- todo -->
+You should see the available commands: `pipeline` and `experiment`.
