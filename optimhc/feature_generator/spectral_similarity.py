@@ -25,18 +25,30 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
     3. Align experimental and predicted spectra
     4. Calculate similarity metrics as features
 
-    Parameters:
-        peptides (List[str]): List of peptide sequences
-        charges (List[int]): List of charge states
-        scan_ids (List[int]): List of scan IDs
-        mz_file_paths (List[str]): List of mzML file paths
-        model_type (str): Prediction model type, either "HCD" or "CID"
-        collision_energies (List[float]): List of collision energies, required when model_type is "HCD"
-        remove_pre_nxt_aa (bool): Whether to remove preceding and next amino acids, default is True
-        remove_modification (bool): Whether to remove modifications, default is True
-        url (str): Koina server URL, default is "koina.wilhelmlab.org:443"
-        top_n (int): Number of top peaks to use for alignment, default is 12
-        tolerance_ppm (float): Mass tolerance for alignment in ppm, default is 20
+    Parameters
+    ----------
+    peptides : list of str
+        List of peptide sequences.
+    charges : list of int
+        List of charge states.
+    scan_ids : list of int
+        List of scan IDs.
+    mz_file_paths : list of str
+        List of mzML file paths.
+    model_type : str
+        Prediction model type, either "HCD" or "CID".
+    collision_energies : list of float
+        List of collision energies, required when model_type is "HCD".
+    remove_pre_nxt_aa : bool
+        Whether to remove preceding and next amino acids, default is True.
+    remove_modification : bool
+        Whether to remove modifications, default is True.
+    url : str
+        Koina server URL, default is "koina.wilhelmlab.org:443".
+    top_n : int
+        Number of top peaks to use for alignment, default is 12.
+    tolerance_ppm : float
+        Mass tolerance for alignment in ppm, default is 20.
     """
 
     def __init__(
@@ -118,8 +130,10 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         """
         Return the generated features as a DataFrame.
 
-        Returns:
-            pd.DataFrame: DataFrame containing the generated features
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the generated features.
         """
         return self.df
 
@@ -334,8 +348,10 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         """
         Returns the raw prediction results from Koina.
 
-        Returns:
-            pd.DataFrame: Raw prediction results DataFrame
+        Returns
+        -------
+        pd.DataFrame
+            Raw prediction results DataFrame.
         """
         if self._raw_predictions is None:
             if self.results is None:
@@ -346,8 +362,10 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         """
         Get the raw prediction results DataFrame from Koina.
 
-        Returns:
-            pd.DataFrame: Raw prediction results DataFrame
+        Returns
+        -------
+        pd.DataFrame
+            Raw prediction results DataFrame.
         """
         return self.raw_predictions
 
@@ -355,9 +373,12 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         """
         Save the raw prediction results to a file.
 
-        Parameters:
-            file_path (str): Path to save the file
-            **kwargs: Other parameters passed to pandas.DataFrame.to_csv
+        Parameters
+        ----------
+        file_path : str
+            Path to save the file.
+        **kwargs
+            Other parameters passed to ``pandas.DataFrame.to_csv``.
         """
         if "index" not in kwargs:
             kwargs["index"] = False
@@ -415,20 +436,27 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         """
         Align experimental and predicted spectra using ppm tolerance.
 
-        Parameters:
-            exp_mz (List[float]): Experimental m/z values
-            exp_intensity (List[float]): Experimental intensity values
-            pred_mz (List[float]): Predicted m/z values
-            pred_intensity (List[float]): Predicted intensity values
-            pred_annotation (Optional[List[str]]): Predicted fragment annotations
+        Parameters
+        ----------
+        exp_mz : list of float
+            Experimental m/z values.
+        exp_intensity : list of float
+            Experimental intensity values.
+        pred_mz : list of float
+            Predicted m/z values.
+        pred_intensity : list of float
+            Predicted intensity values.
+        pred_annotation : list of str, optional
+            Predicted fragment annotations.
 
-        Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
-                - Aligned experimental intensity vector
-                - Predicted intensity vector
-                - Matching index pairs as int array of shape (N, 2),
-                  where column 0 is pred_idx and column 1 is exp_idx (-1 = no match)
-                - Additional info including original sorted arrays
+        Returns
+        -------
+        tuple of (np.ndarray, np.ndarray, np.ndarray, dict)
+            - Aligned experimental intensity vector
+            - Predicted intensity vector
+            - Matching index pairs as int array of shape (N, 2),
+              where column 0 is pred_idx and column 1 is exp_idx (-1 = no match)
+            - Additional info including original sorted arrays
         """
         # Sort both experimental and predicted spectra by m/z
         exp_mz_sorted, exp_intensity_sorted, _ = self._sort_spectrum_by_mz(exp_mz, exp_intensity)
@@ -479,19 +507,25 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         top_n: int,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Extract top N peaks based on predicted intensity for similarity calculation
+        Extract top N peaks based on predicted intensity for similarity calculation.
 
-        Parameters:
-            aligned_exp_intensity (np.ndarray): Aligned experimental intensity vector
-            aligned_pred_intensity (np.ndarray): Aligned predicted intensity vector
-            matched_indices (np.ndarray): Matching index pairs, shape (N, 2)
-            top_n (int): Number of top peaks to extract
+        Parameters
+        ----------
+        aligned_exp_intensity : np.ndarray
+            Aligned experimental intensity vector.
+        aligned_pred_intensity : np.ndarray
+            Aligned predicted intensity vector.
+        matched_indices : np.ndarray
+            Matching index pairs, shape (N, 2).
+        top_n : int
+            Number of top peaks to extract.
 
-        Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray]:
-                - Top N experimental intensity vector
-                - Top N predicted intensity vector
-                - Top N matching index pairs, shape (top_n, 2)
+        Returns
+        -------
+        tuple of (np.ndarray, np.ndarray, np.ndarray)
+            - Top N experimental intensity vector
+            - Top N predicted intensity vector
+            - Top N matching index pairs, shape (top_n, 2)
         """
         num_peaks = min(top_n, len(aligned_pred_intensity))
         top_pred_indices = np.argsort(-aligned_pred_intensity)[:num_peaks]
@@ -586,10 +620,12 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
 
     def _generate_features(self) -> pd.DataFrame:
         """
-        Generate spectral similarity features
+        Generate spectral similarity features.
 
-        Returns:
-            pd.DataFrame: DataFrame containing generated features
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing generated features.
         """
         psm_df = self.df.copy()
         pred_spectra_df = self._predict_theoretical_spectra(

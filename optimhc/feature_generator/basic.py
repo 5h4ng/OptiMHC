@@ -85,11 +85,15 @@ class BasicFeatureGenerator(BaseFeatureGenerator):
         """
         Preprocess peptide sequence by removing adjacent amino acids and modifications.
 
-        Parameters:
-            peptide (str): Original peptide sequence.
+        Parameters
+        ----------
+        peptide : str
+            Original peptide sequence.
 
-        Returns:
-            str: Preprocessed peptide sequence.
+        Returns
+        -------
+        str
+            Preprocessed peptide sequence.
         """
         if self.remove_pre_nxt_aa:
             peptide = utils.strip_flanking_and_charge(peptide)
@@ -101,11 +105,15 @@ class BasicFeatureGenerator(BaseFeatureGenerator):
         """
         Calculate the Shannon entropy of a peptide sequence.
 
-        Parameters:
-            sequence (str): Peptide sequence.
+        Parameters
+        ----------
+        sequence : str
+            Peptide sequence.
 
-        Returns:
-            float: Shannon entropy value.
+        Returns
+        -------
+        float
+            Shannon entropy value.
         """
         if len(sequence) == 0:
             return 0.0

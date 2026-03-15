@@ -78,28 +78,30 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         DeepLC retraining is on by default. Add ``deeplc_retrain: False`` as a keyword argument to
         disable retraining.
 
-        Parameters:
-        psms: PsmContainer
+        Parameters
+        ----------
+        psms : PsmContainer
             PSMs to generate features for.
-        calibration_criteria_column: str
+        calibration_criteria_column : str
             Column name in the PSMs DataFrame to use for DeepLC calibration.
-        lower_score_is_better
-            Whether a lower PSM score denotes a better matching PSM. Default: False
-        calibration_set_size: int or float
+        lower_score_is_better : bool
+            Whether a lower PSM score denotes a better matching PSM. Default: False.
+        calibration_set_size : int or float
             Amount of best PSMs to use for DeepLC calibration. If this value is lower
             than the number of available PSMs, all PSMs will be used. (default: 0.15)
-        processes: {int, None}
+        processes : int or None
             Number of processes to use in DeepLC. Defaults to 1.
-        model_path: str
+        model_path : str
             Path to the DeepLC model. If None, the default model will be used.
-        remove_pre_nxt_aa: bool
+        remove_pre_nxt_aa : bool
             Whether to remove the first and last amino acids from the peptide sequence.
-            Default: True
-        mod_dict: dict
-            Dictionary of modifications to be used for DeepLC. If None, no modifications will be used.
-        *args: list
+            Default: True.
+        mod_dict : dict
+            Dictionary of modifications to be used for DeepLC. If None, no modifications
+            will be used.
+        *args : list
             Additional positional arguments are passed to DeepLC.
-        kwargs: dict
+        **kwargs : dict
             Additional keyword arguments are passed to DeepLC.
         """
         self.psms = psms
