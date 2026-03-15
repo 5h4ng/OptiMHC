@@ -10,6 +10,7 @@ from mhctools import NetMHCpan41
 from tqdm import tqdm
 
 from optimhc import utils
+from optimhc.feature.factory import feature_generator_factory
 
 from .base_feature_generator import BaseFeatureGenerator
 
@@ -672,3 +673,18 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
 
     #     logger.info(f"Generated best allele information for {len(best_allele_df)} peptides.")
     #     return best_allele_df
+
+    @classmethod
+    def from_config(cls, psms, config, params):
+        return cls(
+            peptides=list(set(psms.peptides)),
+            alleles=config.get("allele", []),
+            mode=params.get("mode", "best"),
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+            remove_modification=True,
+            n_processes=config.get("numProcesses", 1),
+            show_progress=config.get("showProgress", False),
+        )
+
+
+feature_generator_factory.register_generator("NetMHCpan", NetMHCpanFeatureGenerator)

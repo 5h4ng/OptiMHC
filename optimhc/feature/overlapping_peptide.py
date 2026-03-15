@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from optimhc import utils
 from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.factory import feature_generator_factory
 from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)
@@ -686,6 +687,44 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
         self.full_data = self.overlap_data.merge(full_data_df, on="clean_peptide", how="left")
         return self.full_data
 
+    @classmethod
+    def from_config(cls, psms, config, params):
+        instance = cls(
+            peptides=list(set(psms.peptides)),
+            min_overlap_length=params.get("minOverlapLength", 8),
+            min_length=params.get("minLength", 8),
+            max_length=params.get("maxLength", 25),
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+            remove_modification=True,
+        )
+        instance._overlapping_score = params.get("overlappingScore", None)
+        return instance
+
+    def apply(self, psms, source):
+        features = self.generate_features()
+        full_data = self.get_full_data()
+
+        psms.add_metadata(
+            full_data[["Peptide", "contig_member_count", "ContigSequence"]],
+            psms_key=psms.peptide_column,
+            metadata_key="Peptide",
+            source=source,
+        )
+        psms.add_features(
+            features,
+            psms_key=psms.peptide_column,
+            feature_key=self.id_column,
+            source=source,
+        )
+
+        if self._overlapping_score:
+            assign_brother_aggregated_feature(
+                psms,
+                feature_columns=self._overlapping_score,
+                overlapping_source=source,
+                source_name="ContigFeatures",
+            )
+
 
 def assign_brother_aggregated_feature(
     psms: PsmContainer,
@@ -772,3 +811,8 @@ def assign_brother_aggregated_feature(
     new_features_df = psms_with_agg[agg_feature_columns]
 
     psms.add_features_by_index(features_df=new_features_df, source=source_name)
+
+
+feature_generator_factory.register_generator(
+    "OverlappingPeptide", OverlappingPeptideFeatureGenerator
+)

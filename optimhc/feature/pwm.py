@@ -7,6 +7,7 @@ import pandas as pd
 
 from optimhc import utils
 from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.factory import feature_generator_factory
 
 logger = logging.getLogger(__name__)
 
@@ -698,3 +699,16 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                 feature_columns.append(f"N_Flank_PWM_Score_{allele}")
                 feature_columns.append(f"C_Flank_PWM_Score_{allele}")
             return feature_columns
+
+    @classmethod
+    def from_config(cls, psms, config, params):
+        return cls(
+            peptides=list(set(psms.peptides)),
+            alleles=config.get("allele", []),
+            mhc_class=params.get("class", "I"),
+            remove_modification=True,
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+        )
+
+
+feature_generator_factory.register_generator("PWM", PWMFeatureGenerator)

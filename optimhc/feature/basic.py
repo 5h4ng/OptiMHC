@@ -6,6 +6,7 @@ from scipy.stats import entropy  # Import entropy from scipy
 
 from optimhc import utils
 from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.factory import feature_generator_factory
 
 logger = logging.getLogger(__name__)
 
@@ -168,3 +169,18 @@ class BasicFeatureGenerator(BaseFeatureGenerator):
 
         logger.info(f"Generated basic features for {len(features_df)} peptides.")
         return features_df
+
+    @classmethod
+    def from_config(cls, psms, config, params):
+        return cls(
+            peptides=psms.peptides,
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+            remove_modification=True,
+        )
+
+    def apply(self, psms, source):
+        features = self.generate_features()
+        psms.add_features_by_index(features[self.feature_columns], source=source)
+
+
+feature_generator_factory.register_generator("Basic", BasicFeatureGenerator)

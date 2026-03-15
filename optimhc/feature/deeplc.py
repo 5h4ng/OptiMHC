@@ -9,6 +9,7 @@ from deeplc import DeepLC
 
 from optimhc import utils
 from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.factory import feature_generator_factory
 from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)
@@ -457,3 +458,26 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
             logger.info(f"Raw predictions saved to {file_path}")
         else:
             logger.warning("Raw predictions have not been generated yet.")
+
+    @classmethod
+    def from_config(cls, psms, config, params):
+        mod_dict = config.get("modificationMap", None)
+        if mod_dict == {}:
+            mod_dict = None
+        return cls(
+            psms=psms,
+            calibration_criteria_column=params.get("calibrationCriteria"),
+            lower_score_is_better=params.get("lowerIsBetter"),
+            calibration_set_size=params.get("calibrationSize", 0.1),
+            processes=config.get("numProcesses", 1),
+            model_path=params.get("model_path", None),
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+            mod_dict=mod_dict,
+        )
+
+    def apply(self, psms, source):
+        features = self.generate_features()
+        psms.add_features_by_index(features[self.feature_columns], source=source)
+
+
+feature_generator_factory.register_generator("DeepLC", DeepLCFeatureGenerator)

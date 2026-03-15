@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List
+from typing import List
 
 import pandas as pd
 
-if TYPE_CHECKING:
-    from optimhc.psm_container import PsmContainer
+from optimhc.psm_container import PsmContainer
 
 
 class BaseFeatureGenerator(ABC):
@@ -40,7 +39,7 @@ class BaseFeatureGenerator(ABC):
     @classmethod
     def from_config(
         cls,
-        psms: "PsmContainer",
+        psms: PsmContainer,
         config: dict,
         params: dict,
     ) -> "BaseFeatureGenerator":
@@ -60,7 +59,7 @@ class BaseFeatureGenerator(ABC):
             f"{cls.__name__} must implement from_config()"
         )
 
-    def apply(self, psms: "PsmContainer", source: str) -> None:
+    def apply(self, psms: PsmContainer, source: str) -> None:
         """Generate features and merge them into the PsmContainer.
 
         The default implementation merges by peptide column using

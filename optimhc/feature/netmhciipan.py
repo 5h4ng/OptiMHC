@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from optimhc import utils
 from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.factory import feature_generator_factory
 
 logger = logging.getLogger(__name__)
 
@@ -645,3 +646,18 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
             logger.info(f"Raw prediction results saved to: {file_path}")
         else:
             logger.warning("No raw prediction results available to save.")
+
+    @classmethod
+    def from_config(cls, psms, config, params):
+        return cls(
+            peptides=list(set(psms.peptides)),
+            alleles=config.get("allele", []),
+            mode=params.get("mode", "best"),
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+            remove_modification=True,
+            n_processes=config.get("numProcesses", 1),
+            show_progress=config.get("showProgress", False),
+        )
+
+
+feature_generator_factory.register_generator("NetMHCIIpan", NetMHCIIpanFeatureGenerator)

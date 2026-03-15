@@ -7,6 +7,7 @@ from koinapy import Koina
 
 from optimhc import utils
 from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.factory import feature_generator_factory
 from optimhc.feature.numba_utils import align_peaks, compute_similarity_features
 from optimhc.parser import extract_mzml_data
 
@@ -824,3 +825,107 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         results and raw data used in feature generation.
         """
         return self.results
+
+    @staticmethod
+    def _resolve_mzml_paths(psms, params):
+        """Resolve per-PSM mzML file paths from config and PsmContainer."""
+        import os
+        import re
+
+        mzml_dir = params.get("mzmlDir", None)
+        if mzml_dir is None:
+            raise ValueError("mzmlDir is required for SpectralSimilarity feature generator.")
+
+        pattern = params.get("spectrumIdPattern", None)
+        mz_file_names = []
+        spectrum_ids = psms.spectrum_ids
+
+        if pattern:
+            logger.info(f"Using pattern: {pattern} to extract mzML file names from spectrum IDs.")
+            for spectrum_id in spectrum_ids:
+                mz_file_names.append(re.match(pattern, spectrum_id).group(1))
+            logger.info(f"mzML file names: {list(set(mz_file_names))}")
+        else:
+            logger.info("Spectrum ID pattern is not provided.")
+            if psms.ms_data_file_column is not None:
+                logger.info(
+                    f"Trying to extract mzML file names from {psms.ms_data_file_column}"
+                )
+                logger.info(
+                    f"MS data file format: {set(psms.psms[psms.ms_data_file_column])}"
+                )
+                for ms_data_file in psms.psms[psms.ms_data_file_column]:
+                    mz_file_basename = os.path.basename(ms_data_file).split(".")[0]
+                    if mz_file_basename.endswith(".mzML"):
+                        mz_file_basename = mz_file_basename[:-5]
+                    elif mz_file_basename.endswith("mzML"):
+                        mz_file_basename = mz_file_basename[:-4]
+                    mz_file_names.append(mz_file_basename)
+                logger.info(f"mzML file names: {list(set(mz_file_names))}")
+            else:
+                logger.info("MS data file information is not provided.")
+                logger.info(
+                    r"Trying to use the default pattern: (.+?)\.\d+\.\d+\.\d+ "
+                    "to extract mzML file names from spectrum IDs."
+                )
+                for spectrum_id in spectrum_ids:
+                    mz_file_names.append(
+                        re.match(r"(.+?)\.\d+\.\d+\.\d+", spectrum_id).group(1)
+                    )
+
+        mz_file_paths = [
+            os.path.join(mzml_dir, f"{mz_file}.mzML") for mz_file in mz_file_names
+        ]
+        for mz_file_path in set(mz_file_paths):
+            if not os.path.exists(mz_file_path):
+                logger.error(f"mzML file not found: {mz_file_path}")
+
+        return mz_file_paths
+
+    @classmethod
+    def from_config(cls, psms, config, params):
+        mz_file_paths = cls._resolve_mzml_paths(psms, params)
+        mod_dict = config.get("modificationMap", None)
+        if mod_dict == {}:
+            mod_dict = None
+
+        model_type = params.get("model", None)
+        if model_type is None:
+            raise ValueError("Model type is required for SpectralSimilarity feature generator.")
+
+        n = len(psms.peptides)
+        collision_energy = params.get("collisionEnergy", None)
+        instrument = params.get("instrument", None)
+        fragmentation_type = params.get("fragmentationType", None)
+
+        return cls(
+            spectrum_ids=psms.spectrum_ids,
+            peptides=psms.peptides,
+            charges=psms.charges,
+            scan_ids=psms.scan_ids,
+            mz_file_paths=mz_file_paths,
+            model_type=model_type,
+            collision_energies=[collision_energy] * n if collision_energy else None,
+            instruments=[instrument] * n if instrument else None,
+            fragmentation_types=[fragmentation_type] * n if fragmentation_type else None,
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+            mod_dict=mod_dict,
+            url=params.get("url"),
+            ssl=params.get("ssl", True),
+            top_n=params.get("numTopPeaks", 36),
+            tolerance_ppm=params.get("tolerance", 20),
+        )
+
+    def apply(self, psms, source):
+        features = self.generate_features()
+        psms.add_features(
+            features,
+            psms_key=[psms.spectrum_column, psms.peptide_column, psms.charge_column],
+            feature_key=self.id_column,
+            source=source,
+        )
+
+
+feature_generator_factory.register_generator(
+    "SpectralSimilarity", SpectralSimilarityFeatureGenerator
+)

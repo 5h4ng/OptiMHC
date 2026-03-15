@@ -6,6 +6,7 @@ from mhcflurry import Class1PresentationPredictor
 
 from optimhc import utils
 from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.factory import feature_generator_factory
 
 logger = logging.getLogger(__name__)
 
@@ -338,3 +339,15 @@ class MHCflurryFeatureGenerator(BaseFeatureGenerator):
         if self.predictions is None:
             raise ValueError("No predictions available. Please run 'generate_features' first.")
         return self.predictions
+
+    @classmethod
+    def from_config(cls, psms, config, params):
+        return cls(
+            peptides=list(set(psms.peptides)),
+            alleles=config.get("allele", []),
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+            remove_modification=True,
+        )
+
+
+feature_generator_factory.register_generator("MHCflurry", MHCflurryFeatureGenerator)
