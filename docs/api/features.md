@@ -20,7 +20,7 @@
 
 ## DeepLC
 
-::: optimhc.feature.DeepLC
+::: optimhc.feature.deeplc
     options:
       members: true
 
@@ -32,7 +32,7 @@
 
 ## PWM
 
-::: optimhc.feature.PWM
+::: optimhc.feature.pwm
     options:
       members: true
 
@@ -44,12 +44,12 @@
 
 ## NetMHCpan
 
-::: optimhc.feature.netMHCpan
+::: optimhc.feature.netmhcpan
     options:
       members: true
 
 ## NetMHCIIpan
 
-::: optimhc.feature.netMHCIIpan
+::: optimhc.feature.netmhciipan
     options:
       members: true

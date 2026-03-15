@@ -10,12 +10,12 @@ import logging
 import os
 import re
 
-from optimhc.feature.netMHCIIpan import NetMHCIIpanFeatureGenerator
+from optimhc.feature.netmhciipan import NetMHCIIpanFeatureGenerator
 
 # The reason why we need to import the feature generators here is that
 # the package 'mhctools' affect the logging configuration of optiMHC.
 # TODO: find a better way to handle this.
-from optimhc.feature.netMHCpan import NetMHCpanFeatureGenerator
+from optimhc.feature.netmhcpan import NetMHCpanFeatureGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "PWM":
-                from optimhc.feature.PWM import PWMFeatureGenerator
+                from optimhc.feature.pwm import PWMFeatureGenerator
 
                 pwm_generator = PWMFeatureGenerator(
                     unique_peptides,
@@ -167,7 +167,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "NetMHCpan":
-                # from optimhc.feature.netMHCpan import NetMHCpanFeatureGenerator
+                # from optimhc.feature.netmhcpan import NetMHCpanFeatureGenerator
                 netmhcpan_generator = NetMHCpanFeatureGenerator(
                     unique_peptides,
                     alleles=allele,
@@ -189,7 +189,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "NetMHCIIpan":
-                # from optimhc.feature.netMHCIIpan import NetMHCIIpanFeatureGenerator
+                # from optimhc.feature.netmhciipan import NetMHCIIpanFeatureGenerator
                 netmhciipan_generator = NetMHCIIpanFeatureGenerator(
                     unique_peptides,
                     alleles=allele,
@@ -211,7 +211,7 @@ def generate_features(psms, config):
                 gc.collect()
 
             elif generator_type == "DeepLC":
-                from optimhc.feature.DeepLC import DeepLCFeatureGenerator
+                from optimhc.feature.deeplc import DeepLCFeatureGenerator
 
                 deeplc_generator = DeepLCFeatureGenerator(
                     psms,
