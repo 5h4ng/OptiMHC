@@ -6,6 +6,7 @@ import sys
 
 import click
 
+from optimhc import __version__
 from optimhc.core import Pipeline
 from optimhc.core.config import Config
 
@@ -19,9 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
+@click.version_option(version=__version__, prog_name="optimhc")
 def cli():
     """
-    optiMHC - A high-performance rescoring pipeline for immunopeptidomics data.
+    OptiMHC - A optimized rescoring pipeline for immunopeptidomics data.
     """
     pass
 

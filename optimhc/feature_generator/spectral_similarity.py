@@ -89,7 +89,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         )
 
         self.df["processed_peptide"] = self.df["peptide"].apply(self._preprocess_peptide)
-        logger.info(f"Recevied {len(self.df)} PSMs for spectral similarity feature generation")
+        logger.info(f"Received {len(self.df)} PSMs for spectral similarity feature generation")
 
     @property
     def id_column(self) -> List[str]:
@@ -304,30 +304,30 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             else:
                 raise ValueError(f"Unsupported model type: {self.model_type}")
 
-            # Save the raw prediction results
-            self._raw_predictions = predictions.copy()
+        # Save the raw prediction results
+        self._raw_predictions = predictions.copy()
 
-            # Convert prediction results to a suitable format
-            pred_df = predictions.copy()
-            pred_df.rename(
-                columns={
-                    "peptide_sequences": "processed_peptide",
-                    "precursor_charges": "charge",
-                    "intensities": "pred_intensity",
-                    "mz": "pred_mz",
-                },
-                inplace=True,
-            )
+        # Convert prediction results to a suitable format
+        pred_df = predictions.copy()
+        pred_df.rename(
+            columns={
+                "peptide_sequences": "processed_peptide",
+                "precursor_charges": "charge",
+                "intensities": "pred_intensity",
+                "mz": "pred_mz",
+            },
+            inplace=True,
+        )
 
-            # Group by peptide and charge, convert predicted mz and intensity to lists
-            grouped_df = (
-                pred_df.groupby(["processed_peptide", "charge"])
-                .agg({"pred_intensity": list, "pred_mz": list, "annotation": list})
-                .reset_index()
-            )
+        # Group by peptide and charge, convert predicted mz and intensity to lists
+        grouped_df = (
+            pred_df.groupby(["processed_peptide", "charge"])
+            .agg({"pred_intensity": list, "pred_mz": list, "annotation": list})
+            .reset_index()
+        )
 
-            logger.info(f"Successfully predicted {len(grouped_df)} theoretical spectra")
-            return grouped_df
+        logger.info(f"Successfully predicted {len(grouped_df)} theoretical spectra")
+        return grouped_df
 
     @property
     def raw_predictions(self) -> pd.DataFrame:
