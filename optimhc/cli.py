@@ -9,17 +9,26 @@ from optimhc.core.config import Config
 
 logger = logging.getLogger(__name__)
 
+LOG_MAPPING = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
+}
 
-def setup_logging():
+
+def setup_logging(level: str = "INFO") -> None:
+    if level not in LOG_MAPPING:
+        raise ValueError(f"Invalid log level: {level}")
     logging.basicConfig(
-        level=logging.INFO,
+        level=LOG_MAPPING[level],
         format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        force=True,  # avoid hijacking by mhctools
+        force=True,
     )
 
     # mhctools attaches its own INFO-level handlers to its loggers
-    # we need to clear them
     # https://github.com/openvax/mhctools/blob/master/mhctools/logging.conf
     for name in [
         "mhctools",
@@ -125,15 +134,8 @@ def pipeline(
     model,
 ):
     """Run the optiMHC pipeline with the specified configuration."""
-    setup_logging()
+    pipeline_config = Config(config) if config else Config()
 
-    # Load configuration
-    if config:
-        pipeline_config = Config(config)
-    else:
-        pipeline_config = Config()
-
-    # Override with command-line parameters
     if inputtype:
         pipeline_config["inputType"] = inputtype
     if inputfile:
@@ -164,10 +166,9 @@ def pipeline(
     if model:
         pipeline_config["rescore"]["model"] = model
 
-    # Run pipeline
+    setup_logging(pipeline_config["logLevel"])
     pipeline_config.validate()
-    pipeline = Pipeline(pipeline_config)
-    pipeline.run()
+    Pipeline(pipeline_config).run()
 
 
 @cli.command()
@@ -179,14 +180,10 @@ def pipeline(
 )
 def experiment(config):
     """Run multiple experiments with different feature combinations."""
-    setup_logging()
-
-    # Load configuration
     pipeline_config = Config(config)
+    setup_logging(pipeline_config["logLevel"])
 
-    # Run experiments
-    pipeline = Pipeline(pipeline_config)
-    pipeline.run_experiments()
+    Pipeline(pipeline_config).run_experiments()
 
 
 if __name__ == "__main__":
