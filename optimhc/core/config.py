@@ -59,11 +59,15 @@ def load_config(config_path):
     Load and parse a configuration file using YAML.
     Merges loaded config with default configuration.
 
-    Parameters:
-        config_path (str): Path to the YAML configuration file.
+    Parameters
+    ----------
+    config_path : str
+        Path to the YAML configuration file.
 
-    Returns:
-        dict: A dictionary containing all configurations.
+    Returns
+    -------
+    dict
+        A dictionary containing all configurations.
     """
     logger.info(f"Loading configuration from {config_path}")
     with open(config_path, "r") as f:

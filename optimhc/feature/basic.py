@@ -1,5 +1,3 @@
-# feature_generator/basic.py
-
 import logging
 from typing import List
 
@@ -7,7 +5,8 @@ import pandas as pd
 from scipy.stats import entropy  # Import entropy from scipy
 
 from optimhc import utils
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.factory import feature_generator_factory
 
 logger = logging.getLogger(__name__)
 
@@ -85,11 +84,15 @@ class BasicFeatureGenerator(BaseFeatureGenerator):
         """
         Preprocess peptide sequence by removing adjacent amino acids and modifications.
 
-        Parameters:
-            peptide (str): Original peptide sequence.
+        Parameters
+        ----------
+        peptide : str
+            Original peptide sequence.
 
-        Returns:
-            str: Preprocessed peptide sequence.
+        Returns
+        -------
+        str
+            Preprocessed peptide sequence.
         """
         if self.remove_pre_nxt_aa:
             peptide = utils.strip_flanking_and_charge(peptide)
@@ -101,11 +104,15 @@ class BasicFeatureGenerator(BaseFeatureGenerator):
         """
         Calculate the Shannon entropy of a peptide sequence.
 
-        Parameters:
-            sequence (str): Peptide sequence.
+        Parameters
+        ----------
+        sequence : str
+            Peptide sequence.
 
-        Returns:
-            float: Shannon entropy value.
+        Returns
+        -------
+        float
+            Shannon entropy value.
         """
         if len(sequence) == 0:
             return 0.0
@@ -162,3 +169,18 @@ class BasicFeatureGenerator(BaseFeatureGenerator):
 
         logger.info(f"Generated basic features for {len(features_df)} peptides.")
         return features_df
+
+    @classmethod
+    def from_config(cls, psms, config, params):
+        return cls(
+            peptides=psms.peptides,
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+            remove_modification=True,
+        )
+
+    def apply(self, psms, source):
+        features = self.generate_features()
+        psms.add_features_by_index(features[self.feature_columns], source=source)
+
+
+feature_generator_factory.register_generator("Basic", BasicFeatureGenerator)

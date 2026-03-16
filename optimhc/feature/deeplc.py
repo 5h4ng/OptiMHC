@@ -1,4 +1,3 @@
-# feature_generator/DeepLC.py
 # TODO: Use koina for prediction
 
 import logging
@@ -9,7 +8,8 @@ import pandas as pd
 from deeplc import DeepLC
 
 from optimhc import utils
-from optimhc.feature_generator.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.base_feature_generator import BaseFeatureGenerator
+from optimhc.feature.factory import feature_generator_factory
 from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)
@@ -78,28 +78,30 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         DeepLC retraining is on by default. Add ``deeplc_retrain: False`` as a keyword argument to
         disable retraining.
 
-        Parameters:
-        psms: PsmContainer
+        Parameters
+        ----------
+        psms : PsmContainer
             PSMs to generate features for.
-        calibration_criteria_column: str
+        calibration_criteria_column : str
             Column name in the PSMs DataFrame to use for DeepLC calibration.
-        lower_score_is_better
-            Whether a lower PSM score denotes a better matching PSM. Default: False
-        calibration_set_size: int or float
+        lower_score_is_better : bool
+            Whether a lower PSM score denotes a better matching PSM. Default: False.
+        calibration_set_size : int or float
             Amount of best PSMs to use for DeepLC calibration. If this value is lower
             than the number of available PSMs, all PSMs will be used. (default: 0.15)
-        processes: {int, None}
+        processes : int or None
             Number of processes to use in DeepLC. Defaults to 1.
-        model_path: str
+        model_path : str
             Path to the DeepLC model. If None, the default model will be used.
-        remove_pre_nxt_aa: bool
+        remove_pre_nxt_aa : bool
             Whether to remove the first and last amino acids from the peptide sequence.
-            Default: True
-        mod_dict: dict
-            Dictionary of modifications to be used for DeepLC. If None, no modifications will be used.
-        *args: list
+            Default: True.
+        mod_dict : dict
+            Dictionary of modifications to be used for DeepLC. If None, no modifications
+            will be used.
+        *args : list
             Additional positional arguments are passed to DeepLC.
-        kwargs: dict
+        **kwargs : dict
             Additional keyword arguments are passed to DeepLC.
         """
         self.psms = psms
@@ -456,3 +458,26 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
             logger.info(f"Raw predictions saved to {file_path}")
         else:
             logger.warning("Raw predictions have not been generated yet.")
+
+    @classmethod
+    def from_config(cls, psms, config, params):
+        mod_dict = config.get("modificationMap", None)
+        if mod_dict == {}:
+            mod_dict = None
+        return cls(
+            psms=psms,
+            calibration_criteria_column=params.get("calibrationCriteria"),
+            lower_score_is_better=params.get("lowerIsBetter"),
+            calibration_set_size=params.get("calibrationSize", 0.1),
+            processes=config.get("numProcesses", 1),
+            model_path=params.get("model_path", None),
+            remove_pre_nxt_aa=config["removePreNxtAA"],
+            mod_dict=mod_dict,
+        )
+
+    def apply(self, psms, source):
+        features = self.generate_features()
+        psms.add_features_by_index(features[self.feature_columns], source=source)
+
+
+feature_generator_factory.register_generator("DeepLC", DeepLCFeatureGenerator)

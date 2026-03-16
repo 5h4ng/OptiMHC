@@ -2,54 +2,54 @@
 
 ## Base Class
 
-::: optimhc.feature_generator.base_feature_generator
+::: optimhc.feature.base_feature_generator
     options:
       members: true
 
 ## Basic
 
-::: optimhc.feature_generator.basic
+::: optimhc.feature.basic
     options:
       members: true
 
 ## Spectral Similarity
 
-::: optimhc.feature_generator.spectral_similarity
+::: optimhc.feature.spectral_similarity
     options:
       members: true
 
 ## DeepLC
 
-::: optimhc.feature_generator.DeepLC
+::: optimhc.feature.deeplc
     options:
       members: true
 
 ## Overlapping Peptide
 
-::: optimhc.feature_generator.overlapping_peptide
+::: optimhc.feature.overlapping_peptide
     options:
       members: true
 
 ## PWM
 
-::: optimhc.feature_generator.PWM
+::: optimhc.feature.pwm
     options:
       members: true
 
 ## MHCflurry
 
-::: optimhc.feature_generator.mhcflurry
+::: optimhc.feature.mhcflurry
     options:
       members: true
 
 ## NetMHCpan
 
-::: optimhc.feature_generator.netMHCpan
+::: optimhc.feature.netmhcpan
     options:
       members: true
 
 ## NetMHCIIpan
 
-::: optimhc.feature_generator.netMHCIIpan
+::: optimhc.feature.netmhciipan
     options:
       members: true

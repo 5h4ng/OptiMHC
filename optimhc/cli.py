@@ -1,27 +1,55 @@
-import importlib.util
 import json
 import logging
-import os
-import sys
 
 import click
 
+from optimhc import __version__
 from optimhc.core import Pipeline
 from optimhc.core.config import Config
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-
 logger = logging.getLogger(__name__)
+
+LOG_MAPPING = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
+}
+
+
+def setup_logging(level: str = "INFO") -> None:
+    if level not in LOG_MAPPING:
+        raise ValueError(f"Invalid log level: {level}")
+    logging.basicConfig(
+        level=LOG_MAPPING[level],
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        force=True,
+    )
+
+    # mhctools attaches its own INFO-level handlers to its loggers
+    # https://github.com/openvax/mhctools/blob/master/mhctools/logging.conf
+    for name in [
+        "mhctools",
+        "mhctools.base_commandline_predictor",
+        "mhctools.netmhc",
+        "mhctools.netmhciipan",
+        "mhctools.process_helpers",
+        "mhctools.cleanup_context",
+    ]:
+        lg = logging.getLogger(name)
+        lg.handlers.clear()
+        lg.disabled = True
+        lg.propagate = False
+        lg.setLevel(logging.CRITICAL)
 
 
 @click.group()
+@click.version_option(version=__version__, prog_name="optimhc")
 def cli():
     """
-    optiMHC - A high-performance rescoring pipeline for immunopeptidomics data.
+    OptiMHC - A optimized rescoring pipeline for immunopeptidomics data.
     """
     pass
 
@@ -106,13 +134,8 @@ def pipeline(
     model,
 ):
     """Run the optiMHC pipeline with the specified configuration."""
-    # Load configuration
-    if config:
-        pipeline_config = Config(config)
-    else:
-        pipeline_config = Config()
+    pipeline_config = Config(config) if config else Config()
 
-    # Override with command-line parameters
     if inputtype:
         pipeline_config["inputType"] = inputtype
     if inputfile:
@@ -143,10 +166,9 @@ def pipeline(
     if model:
         pipeline_config["rescore"]["model"] = model
 
-    # Run pipeline
+    setup_logging(pipeline_config["logLevel"])
     pipeline_config.validate()
-    pipeline = Pipeline(pipeline_config)
-    pipeline.run()
+    Pipeline(pipeline_config).run()
 
 
 @cli.command()
@@ -158,63 +180,10 @@ def pipeline(
 )
 def experiment(config):
     """Run multiple experiments with different feature combinations."""
-    # Load configuration
     pipeline_config = Config(config)
+    setup_logging(pipeline_config["logLevel"])
 
-    # Run experiments
-    pipeline = Pipeline(pipeline_config)
-    pipeline.run_experiments()
-
-
-@cli.command()
-def gui():
-    """Launch the optiMHC GUI."""
-    if importlib.util.find_spec("streamlit") is None:
-        print("Error: Streamlit is not installed. Install GUI dependencies with:")
-        print("pip install optimhc[gui]")
-        return
-
-    import subprocess
-
-    # Get the path to the GUI app
-    gui_path = os.path.join(os.path.dirname(__file__), "gui", "app.py")
-
-    if not os.path.exists(gui_path):
-        print(f"Error: GUI application not found at {gui_path}")
-        return
-
-    # Create a temporary launcher script that uses the correct imports
-    import tempfile
-
-    launcher_content = """
-import os
-import sys
-import streamlit
-
-# Add the root directory to the path
-sys.path.insert(0, '{}')
-
-# Import the app module properly
-from optimhc.gui.app import main
-
-if __name__ == "__main__":
-    main()
-    """.format(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-    fd, temp_path = tempfile.mkstemp(suffix=".py")
-    with os.fdopen(fd, "w") as f:
-        f.write(launcher_content)
-
-    # Launch Streamlit with the temporary script
-    print("Starting optiMHC GUI...")
-    try:
-        subprocess.run([sys.executable, "-m", "streamlit", "run", temp_path])
-    finally:
-        # Clean up the temporary file
-        try:
-            os.unlink(temp_path)
-        except OSError:
-            pass
+    Pipeline(pipeline_config).run_experiments()
 
 
 if __name__ == "__main__":

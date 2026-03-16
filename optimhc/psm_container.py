@@ -69,7 +69,7 @@ class PsmContainer:
         protein_column: str,
         rescoring_features: Dict[str, List[str]],
         hit_rank_column: Optional[str] = None,
-        charge_column: Optional[int] = None,
+        charge_column: Optional[str] = None,
         retention_time_column: Optional[str] = None,
         calculated_mass_column: Optional[str] = None,
         metadata_column: Optional[str] = None,
@@ -144,13 +144,13 @@ class PsmContainer:
         logger.info("PsmContainer initialized with %d PSM entries.", len(self._psms))
         if self.ms_data_file_column:
             logger.info(
-                "PSMs originated from %d MS data file(S).",
+                "PSMs originated from %d MS data file(s).",
                 len(self._psms[ms_data_file_column].unique()),
             )
         logger.info("target psms: %d", len(self.target_psms))
         logger.info("decoy psms: %d", len(self.decoy_psms))
         logger.info("unique peptides: %d", len(np.unique(self.peptides)))
-        logger.info("rescoing features: %s", rescoring_features)
+        logger.info("rescoring features: %s", rescoring_features)
 
     @property
     def psms(self) -> pd.DataFrame:

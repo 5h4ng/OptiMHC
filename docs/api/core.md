@@ -24,12 +24,6 @@
     options:
       members: true
 
-## Logging
-
-::: optimhc.core.logging_helper
-    options:
-      members: true
-
 ## Utilities
 
 ::: optimhc.utils
