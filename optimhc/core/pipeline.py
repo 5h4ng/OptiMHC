@@ -15,7 +15,6 @@ from mokapot.model import PercolatorModel
 
 from optimhc.core.config import Config
 from optimhc.core.feature_generation import generate_features
-from optimhc.core.logging_helper import setup_loggers
 from optimhc.parser import read_pepxml, read_pin
 from optimhc.rescore import mokapot
 from optimhc.rescore.model import RandomForestPercolatorModel, XGBoostPercolatorModel
@@ -67,7 +66,6 @@ class Pipeline:
         self.experiment = self.config.get("experimentName", "optimhc_experiment")
         self.output_dir = os.path.join(self.config["outputDir"], self.experiment)
         os.makedirs(self.output_dir, exist_ok=True)
-        setup_loggers(os.path.join(self.output_dir, "log"), self.config.get("logLevel", "INFO"))
 
         self.visualization_enabled = self.config.get("visualization", True)
         self.save_models = self.config.get("saveModels", True)

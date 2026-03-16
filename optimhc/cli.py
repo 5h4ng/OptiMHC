@@ -7,13 +7,33 @@ from optimhc import __version__
 from optimhc.core import Pipeline
 from optimhc.core.config import Config
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-
 logger = logging.getLogger(__name__)
+
+
+def setup_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        force=True,  # avoid hijacking by mhctools
+    )
+
+    # mhctools attaches its own INFO-level handlers to its loggers
+    # we need to clear them
+    # https://github.com/openvax/mhctools/blob/master/mhctools/logging.conf
+    for name in [
+        "mhctools",
+        "mhctools.base_commandline_predictor",
+        "mhctools.netmhc",
+        "mhctools.netmhciipan",
+        "mhctools.process_helpers",
+        "mhctools.cleanup_context",
+    ]:
+        lg = logging.getLogger(name)
+        lg.handlers.clear()
+        lg.disabled = True
+        lg.propagate = False
+        lg.setLevel(logging.CRITICAL)
 
 
 @click.group()
@@ -105,6 +125,8 @@ def pipeline(
     model,
 ):
     """Run the optiMHC pipeline with the specified configuration."""
+    setup_logging()
+
     # Load configuration
     if config:
         pipeline_config = Config(config)
@@ -157,6 +179,8 @@ def pipeline(
 )
 def experiment(config):
     """Run multiple experiments with different feature combinations."""
+    setup_logging()
+
     # Load configuration
     pipeline_config = Config(config)
 
