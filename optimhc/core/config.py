@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
     "saveModels": True,
     "toFlashLFQ": True,
     "allele": [],
-    "numProcess": 4,
+    "numProcesses": 4,
     "removePreNxtAA": False,
     "showProgress": True,
     "logLevel": "INFO",
@@ -59,11 +59,15 @@ def load_config(config_path):
     Load and parse a configuration file using YAML.
     Merges loaded config with default configuration.
 
-    Parameters:
-        config_path (str): Path to the YAML configuration file.
+    Parameters
+    ----------
+    config_path : str
+        Path to the YAML configuration file.
 
-    Returns:
-        dict: A dictionary containing all configurations.
+    Returns
+    -------
+    dict
+        A dictionary containing all configurations.
     """
     logger.info(f"Loading configuration from {config_path}")
     with open(config_path, "r") as f:
@@ -213,7 +217,8 @@ class Config:
         input_files = self._config["inputFile"]
         if not isinstance(input_files, (list, tuple)):
             logger.debug(f"inputFile is not a list or tuple: {input_files}. Converting to list.")
-            self._config["inputFile"] = list(input_files)
+            self._config["inputFile"] = [input_files]
+            input_files = self._config["inputFile"]
         if not input_files:
             logger.error("inputFile list cannot be empty")
             raise ValueError("inputFile list cannot be empty")

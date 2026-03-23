@@ -1,0 +1,93 @@
+site_name: OptiMHC
+site_description: A high-performance rescoring pipeline for immunopeptidomics data to significantly enhance peptide identification performance
+site_author: Zixiang Shang
+repo_url: https://github.com/5h4ng/OptiMHC
+repo_name: 5h4ng/OptiMHC
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            members_order: source
+            docstring_style: numpy
+            merge_init_into_class: true
+            show_if_no_docstring: false
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - Tutorial:
+    - Overview: tutorial/index.md
+    - Examples: tutorial/examples.md
+    - Pipeline Workflow: tutorial/workflow.md
+    - Features:
+      - Overview: tutorial/features/index.md
+      - Original Features: tutorial/features/original.md
+      - Basic Features: tutorial/features/basic.md
+      - Spectral Similarity: tutorial/features/spectral-similarity.md
+      - Retention Time Deviation: tutorial/features/rt-deviation.md
+      - Antigen Presentation Scores: tutorial/features/antigen-presentation.md
+      - PWM Score: tutorial/features/pwm.md
+      - Overlapping Peptide Score: tutorial/features/overlapping.md
+  - API Reference:
+    - Overview: api/index.md
+    - Core: api/core.md
+    - I/O: api/io.md
+    - Feature Generators: api/features.md
+    - Rescoring: api/rescore.md
+    - Visualization: api/visualization.md
+    - CLI: api/cli.md
+  - Development:
+    - development/index.md

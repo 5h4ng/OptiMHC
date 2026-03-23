@@ -89,8 +89,8 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
+# MkDocs build output
+site/
 
 # PyBuilder
 .pybuilder/
@@ -198,6 +198,10 @@ cython_debug/
 # Cursor rules directory
 .cursor/rules/
 
+### Claude Code ###
+.claude/
+CLAUDE.md
+
 ### Python Patch ###
 # Poetry local configuration file - https://python-poetry.org/docs/configuration/#local-configuration
 poetry.toml
@@ -214,3 +218,5 @@ data/compressed/*mzML.gz
 
 # Ignore example results directory to avoid large files
 examples/results/
+
+.DS_Store

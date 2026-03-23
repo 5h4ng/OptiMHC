@@ -120,7 +120,7 @@ def plot_feature_importance(
     source_colors = dict(zip(rescoring_features.keys(), colors))
 
     for source, features in rescoring_features.items():
-        color = source_colors[source]  # 修改：使用预分配的颜色
+        color = source_colors[source]
         indices = [
             i for i, name in enumerate(sum(rescoring_features.values(), [])) if name in features
         ]

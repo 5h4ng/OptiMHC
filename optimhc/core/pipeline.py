@@ -15,7 +15,6 @@ from mokapot.model import PercolatorModel
 
 from optimhc.core.config import Config
 from optimhc.core.feature_generation import generate_features
-from optimhc.core.logging_helper import setup_loggers
 from optimhc.parser import read_pepxml, read_pin
 from optimhc.rescore import mokapot
 from optimhc.rescore.model import RandomForestPercolatorModel, XGBoostPercolatorModel
@@ -67,7 +66,6 @@ class Pipeline:
         self.experiment = self.config.get("experimentName", "optimhc_experiment")
         self.output_dir = os.path.join(self.config["outputDir"], self.experiment)
         os.makedirs(self.output_dir, exist_ok=True)
-        setup_loggers(os.path.join(self.output_dir, "log"), self.config.get("logLevel", "INFO"))
 
         self.visualization_enabled = self.config.get("visualization", True)
         self.save_models = self.config.get("saveModels", True)
@@ -281,6 +279,8 @@ class Pipeline:
         bool
             True if experiment succeeded, False otherwise.
         """
+        results = None
+        models = None
         try:
             os.makedirs(exp_dir, exist_ok=True)
 
@@ -333,12 +333,8 @@ class Pipeline:
             return False
 
         finally:
-            # Explicit resource release to free up memory after each experiment
-            try:
-                del results
-                del models
-            except Exception:
-                pass
+            del results
+            del models
             gc.collect()
 
     def run(self):
@@ -382,8 +378,6 @@ class Pipeline:
 
         psms = self.read_input()
         psms = self._generate_features(psms)
-
-        # Save the generated pin file for reference
         pin_path = os.path.join(self.output_dir, f"optimhc.{self.experiment}.pin")
         psms.write_pin(pin_path)
         fig_summary_dir = os.path.join(self.output_dir, "figures")
