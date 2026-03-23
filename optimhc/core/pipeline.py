@@ -1,23 +1,13 @@
-"""
-pipeline.py
-
-Implements the main optiMHC pipeline for immunopeptidomics rescoring, including input parsing,
-feature generation, rescoring, result saving, and visualization. Supports both single-run and
-experiment modes.
-"""
-
 import gc
 import logging
 import os
 from multiprocessing import Process
 
-from mokapot.model import PercolatorModel
-
 from optimhc.core.config import Config
 from optimhc.core.feature_generation import generate_features
 from optimhc.parser import read_pepxml, read_pin
 from optimhc.rescore import mokapot
-from optimhc.rescore.model import RandomForestPercolatorModel, XGBoostPercolatorModel
+from optimhc.rescore.factory import rescore_model_factory
 from optimhc.visualization import (
     plot_feature_importance,
     plot_qvalues,
@@ -28,7 +18,6 @@ from optimhc.visualization import (
 logger = logging.getLogger(__name__)
 
 
-# TODO: fix the type hinting for mokapot results
 class Pipeline:
     """
     Main pipeline class for optiMHC, encapsulating the full data processing workflow.
@@ -128,6 +117,10 @@ class Pipeline:
         generate_features(psms, self.config)
         return psms
 
+    @staticmethod
+    def _build_model_config(train_fdr, n_jobs):
+        return {"rescore": {"trainFDR": train_fdr, "numJobs": n_jobs}}
+
     def rescore(self, psms, model_type=None, n_jobs=None, test_fdr=None, rescoring_features=None):
         """
         Perform rescoring on the PSMs using the specified or configured model.
@@ -160,14 +153,8 @@ class Pipeline:
         n_jobs = n_jobs if n_jobs is not None else self.n_jobs
 
         train_fdr = getattr(self, "train_fdr", 0.01)
-        if model_type == "XGBoost":
-            model = XGBoostPercolatorModel(train_fdr=train_fdr, n_jobs=n_jobs)
-        elif model_type == "RandomForest":
-            model = RandomForestPercolatorModel(train_fdr=train_fdr, n_jobs=n_jobs)
-        elif model_type == "Percolator":
-            model = PercolatorModel(train_fdr=train_fdr, n_jobs=n_jobs)
-        else:
-            model = PercolatorModel(train_fdr=train_fdr, n_jobs=n_jobs)
+        model_cls = rescore_model_factory.get_model(model_type)
+        model = model_cls.from_config(self._build_model_config(train_fdr=train_fdr, n_jobs=n_jobs))
 
         kwargs = {}
         if rescoring_features is not None:
