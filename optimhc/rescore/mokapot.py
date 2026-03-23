@@ -30,7 +30,7 @@ def rescore(
     psms : PsmContainer
         A PsmContainer object containing PSM data.
     model : object, optional
-        An untrained mokapot-compatible model (e.g. PercolatorModel, XGBoostPercolatorModel).
+        An untrained mokapot-compatible model (e.g. PercolatorModel, XGBoostModel).
         mokapot.brew trains it internally across cross-validation folds. If None, mokapot
         uses its default PercolatorModel.
     rescoring_features : List[str], optional
