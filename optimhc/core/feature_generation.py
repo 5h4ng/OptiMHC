@@ -17,10 +17,18 @@ def generate_features(psms, config):
         A container object holding PSMs and relevant data.
     config : dict
         Configuration dictionary loaded from YAML or CLI.
+
+    Returns
+    -------
+    dict
+        Dict of raw predictions from binding generators, keyed by generator name.
+        Only includes generators that have ``_raw_predictions`` set.
     """
     feature_generators = config.get("featureGenerator", None)
     if not feature_generators:
-        return
+        return {}
+
+    raw_predictions = {}
 
     for generator_config in feature_generators:
         if not isinstance(generator_config, dict):
@@ -34,4 +42,75 @@ def generate_features(psms, config):
         generator_cls = feature_generator_factory.get_generator(name)
         generator = generator_cls.from_config(psms, config, params)
         generator.apply(psms, source=name)
+
+        # Capture raw predictions from binding predictors before GC
+        if hasattr(generator, "_raw_predictions") and generator._raw_predictions is not None:
+            raw_predictions[name] = generator._raw_predictions.copy()
+
+        del generator
         gc.collect()
+
+    return raw_predictions
+
+
+def _build_ba_parquet(raw_predictions, output_path):
+    """Assemble BA.parquet from collected raw binding predictions.
+
+    Parameters
+    ----------
+    raw_predictions : dict
+        Dict mapping generator name to raw prediction DataFrame.
+    output_path : str
+        Path to write the parquet file.
+    """
+    frames = {}
+
+    for name, df in raw_predictions.items():
+        df = df.copy()
+        if name in ("NetMHCpan", "NetMHCIIpan"):
+            prefix = name.lower()
+            valid = df.dropna(subset=["percentile_rank"])
+            if valid.empty:
+                logger.warning("No valid predictions in %s, skipping.", name)
+                continue
+            idx = valid.groupby("peptide")["percentile_rank"].idxmin()
+            best = valid.loc[idx].copy()
+            best = best.rename(
+                columns={
+                    "allele": f"{prefix}_allele",
+                    "affinity": f"{prefix}_affinity",
+                    "percentile_rank": f"{prefix}_ba_rank",
+                }
+            )
+            frames[name] = best[
+                ["peptide", f"{prefix}_allele", f"{prefix}_affinity", f"{prefix}_ba_rank"]
+            ]
+
+        elif name == "MHCflurry":
+            mhc = df.rename(
+                columns={
+                    "best_allele": "mhcflurry_allele",
+                    "affinity": "mhcflurry_affinity",
+                    "presentation_percentile": "mhcflurry_el_rank",
+                }
+            )
+            cols = ["peptide", "mhcflurry_allele", "mhcflurry_affinity", "mhcflurry_el_rank"]
+            frames[name] = mhc[[c for c in cols if c in mhc.columns]]
+
+    if not frames:
+        logger.warning("No binding predictions to save.")
+        return
+
+    frame_list = list(frames.values())
+    ba = frame_list[0]
+    for other in frame_list[1:]:
+        ba = ba.merge(other, on="peptide", how="outer")
+
+    ba.set_index("peptide", inplace=True)
+    ba.to_parquet(output_path)
+    logger.info(
+        "BA.parquet saved to %s (%d peptides, %d columns).",
+        output_path,
+        len(ba),
+        len(ba.columns),
+    )

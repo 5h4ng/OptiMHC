@@ -114,7 +114,13 @@ class Pipeline:
         PsmContainer
             PSM container with generated features.
         """
-        generate_features(psms, self.config)
+        raw_predictions = generate_features(psms, self.config)
+        if self.config.get("keepIntermediate", True) and raw_predictions:
+            from optimhc.core.feature_generation import _build_ba_parquet
+
+            intermediate_dir = os.path.join(self.output_dir, "intermediate")
+            os.makedirs(intermediate_dir, exist_ok=True)
+            _build_ba_parquet(raw_predictions, os.path.join(intermediate_dir, "BA.parquet"))
         return psms
 
     @staticmethod
