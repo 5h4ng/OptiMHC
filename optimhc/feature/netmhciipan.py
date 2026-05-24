@@ -1,5 +1,3 @@
-# TODO: set 'BA' and 'EL' as optional parameters for the user to choose the prediction method.
-
 import logging
 import os
 from multiprocessing import Pool, cpu_count
@@ -18,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Each worker process gets its own copy of this global.
 # Pool(initializer=_init_worker) sets it once per process,
-# so netMHCIIpan is called O(processes) not O(chunks).
+# so netMHCIIpan -list is called O(processes) not O(chunks).
 _worker_predictor: Optional[NetMHCIIpan43_BA] = None
 
 
@@ -38,10 +36,10 @@ def _predict_peptide_chunk(peptides_chunk: List[str]) -> pd.DataFrame:
 
 class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
     """
-    Generate NetMHCIIpan features for given peptides based on specified MHC Class II alleles.
+    Generate NetMHCIIpan binding prediction features for MHC class II alleles.
 
-    This feature generator uses the NetMHCIIpan43_BA interface to predict MHC Class II binding
-    for each peptide and returns scores and features based on the specified parameters.
+    For each peptide, reports the prediction for the allele with the lowest
+    percentile rank (strongest predicted binder).
 
     Parameters
     ----------
@@ -49,11 +47,6 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         List of peptide sequences.
     alleles : List[str]
         List of MHC Class II alleles, e.g., ['DRB1_0101', 'DRB1_0102'].
-    mode : str, optional
-        Feature generation mode. Options:
-        - 'best': Return only the best result for each peptide across all alleles.
-        - 'all': Return prediction results for each peptide across all alleles (with allele-specific column suffixes).
-        Default is 'best'.
     remove_pre_nxt_aa : bool, optional
         Whether to remove the amino acids flanking the peptide. Default is True.
     remove_modification : bool, optional
@@ -67,10 +60,10 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
 
     Notes
     -----
-    The generated features include:
+    Generated features:
     - netmhciipan_score: Raw binding score
     - netmhciipan_affinity: Binding affinity in nM
-    - netmhciipan_percentile_rank: Percentile rank of the binding score
+    - netmhciipan_percentile_rank: Percentile rank
     """
 
     MIN_PEPTIDE_LENGTH = 9
@@ -81,23 +74,14 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         self,
         peptides: List[str],
         alleles: List[str],
-        mode: str = "best",
         remove_pre_nxt_aa: bool = True,
         remove_modification: bool = True,
         n_processes: int = 1,
         show_progress: bool = False,
         executable_path: str = "netMHCIIpan",
     ):
-        if mode not in ["best", "all"]:
-            raise ValueError("Mode must be one of 'best' or 'all'.")
-
         self.peptides = peptides
         self.alleles = alleles
-        self.mode = mode
-        if len(alleles) == 1:
-            self.mode = "best"
-            logger.info("Only one allele provided. Switching to 'best' mode.")
-
         self.remove_pre_nxt_aa = remove_pre_nxt_aa
         self.remove_modification = remove_modification
         self.n_processes = min(n_processes, cpu_count())
@@ -110,6 +94,8 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
             os.environ["PATH"] = exe_dir + os.pathsep + os.environ.get("PATH", "")
             executable_path = os.path.basename(executable_path)
 
+        # Only create a predictor when running single-process; multiprocessing uses
+        # _init_worker to create one per worker process instead.
         self.predictor = (
             NetMHCIIpan43_BA(alleles=self.alleles, program_name=executable_path)
             if self.n_processes == 1
@@ -120,47 +106,16 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
 
         logger.info(
             f"Initialized NetMHCIIpanFeatureGenerator with {len(peptides)} peptides, "
-            f"alleles={alleles}, mode={self.mode}, "
-            f"n_processes={self.n_processes}, show_progress={self.show_progress}"
+            f"alleles={alleles}, n_processes={self.n_processes}"
         )
 
     @property
     def feature_columns(self) -> List[str]:
-        """
-        Return the list of generated feature column names, determined by the mode.
-        Only includes numerical features, excluding any string features like allele names.
-
-        Returns
-        -------
-        List[str]
-            List of feature column names:
-            - For 'all' mode: netmhciipan_score_{allele}, netmhciipan_affinity_{allele},
-              netmhciipan_percentile_rank_{allele} for each allele
-            - For both modes: netmhciipan_best_score, netmhciipan_best_affinity,
-              netmhciipan_best_percentile_rank
-        """
-        columns = []
-        if self.mode == "all":
-            allele_specific = []
-            for allele in self.alleles:
-                allele_specific.extend(
-                    [
-                        f"netmhciipan_score_{allele}",
-                        f"netmhciipan_affinity_{allele}",
-                        f"netmhciipan_percentile_rank_{allele}",
-                    ]
-                )
-            columns.extend(allele_specific)
-
-        # Both 'best' and 'all' modes include best allele numerical information
-        columns.extend(
-            [
-                "netmhciipan_best_score",
-                "netmhciipan_best_affinity",
-                "netmhciipan_best_percentile_rank",
-            ]
-        )
-        return columns
+        return [
+            "netmhciipan_score",
+            "netmhciipan_affinity",
+            "netmhciipan_percentile_rank",
+        ]
 
     @property
     def id_column(self) -> List[str]:
@@ -212,6 +167,8 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
             return self.predictions
 
         logger.info("Starting NetMHCIIpan predictions.")
+        # Use a local variable so self.predictions is only set on full success,
+        # preventing a partial state from poisoning the cache if an exception occurs.
         predictions = pd.DataFrame(self.peptides, columns=["Peptide"])
         predictions["clean_peptide"] = predictions["Peptide"].apply(self._preprocess_peptides)
 
@@ -241,7 +198,6 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
             ).to_dataframe()
 
         self._raw_predictions = netmhciipan_results.copy()
-        logger.info(f"Predicted NetMHCIIpan results for {len(netmhciipan_results)} peptides.")
 
         predictions = predictions.merge(
             netmhciipan_results, left_on="clean_peptide", right_on="peptide", how="left"
@@ -262,168 +218,85 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         """
         Generate the final feature table with NetMHCIIpan features for each peptide.
 
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame containing peptides and their predicted features.
-
-        Notes
-        -----
-        The features generated depend on the mode:
-        - 'best': Only the best allele information for each peptide
-        - 'all': All allele predictions plus best allele information
-
-        Missing values are filled with column medians.
+        For each peptide, returns the prediction for the allele with the lowest
+        percentile rank. Missing values are filled with column medians.
         """
         predictions_df = self._predict()
-
         features_df = pd.DataFrame({"Peptide": self.peptides})
-
-        if self.mode == "all":
-            features_df = self._generate_all_allele_features(predictions_df, features_df)
-        features_df = self._generate_best_allele_features(predictions_df, features_df)
-
+        features_df = self._select_allele_features(predictions_df, features_df)
         features_df = self._fill_missing_values(features_df)
 
-        selected_columns = ["Peptide"] + self.feature_columns
-        logger.info(f"Final selected feature columns: {selected_columns}")
-        features_df = features_df[selected_columns]
+        features_df = features_df[["Peptide"] + self.feature_columns]
 
         if features_df.isna().sum().sum() > 0:
             logger.warning(
-                "NaN values still exist in the generated features after filling with median/mode values."
+                "NaN values still exist in the generated features after filling with median."
             )
-
         return features_df
 
-    def _generate_all_allele_features(
+    def _select_allele_features(
         self, predictions_df: pd.DataFrame, features_df: pd.DataFrame
     ) -> pd.DataFrame:
-        logger.info("Generating features for all alleles.")
-
-        for allele in self.alleles:
-            logger.info(f"Adding scores for allele {allele}.")
-            allele_df = predictions_df[predictions_df["allele"] == allele].copy()
-
-            if allele_df.empty:
-                logger.warning(
-                    f"No prediction results found for allele {allele}. Filling with NaN."
-                )
-                allele_features = pd.DataFrame(
-                    {
-                        "Peptide": self.peptides,
-                        f"netmhciipan_score_{allele}": [pd.NA] * len(self.peptides),
-                        f"netmhciipan_affinity_{allele}": [pd.NA] * len(self.peptides),
-                        f"netmhciipan_percentile_rank_{allele}": [pd.NA] * len(self.peptides),
-                    }
-                )
-            else:
-                allele_df = allele_df.rename(
-                    columns={
-                        "score": f"netmhciipan_score_{allele}",
-                        "affinity": f"netmhciipan_affinity_{allele}",
-                        "percentile_rank": f"netmhciipan_percentile_rank_{allele}",
-                    }
-                )
-                allele_features = allele_df[
-                    [
-                        "Peptide",
-                        f"netmhciipan_score_{allele}",
-                        f"netmhciipan_affinity_{allele}",
-                        f"netmhciipan_percentile_rank_{allele}",
-                    ]
-                ]
-
-            features_df = features_df.merge(allele_features, on="Peptide", how="left")
-
-        logger.info("Added scores for all alleles.")
-        return features_df
-
-    def _generate_best_allele_features(
-        self, predictions_df: pd.DataFrame, features_df: pd.DataFrame
-    ) -> pd.DataFrame:
-        logger.info("Generating features for best allele.")
-
+        logger.info("Selecting per-peptide allele predictions.")
         valid_predictions = predictions_df.dropna(subset=["percentile_rank"])
 
         if valid_predictions.empty:
-            logger.warning("No valid predictions available to select the best allele.")
-            best_allele_features = pd.DataFrame(
+            logger.warning("No valid predictions available.")
+            allele_features = pd.DataFrame(
                 {
                     "Peptide": self.peptides,
-                    "netmhciipan_best_allele": ["Unknown"] * len(self.peptides),
-                    "netmhciipan_best_score": [pd.NA] * len(self.peptides),
-                    "netmhciipan_best_affinity": [pd.NA] * len(self.peptides),
-                    "netmhciipan_best_percentile_rank": [pd.NA] * len(self.peptides),
+                    "netmhciipan_allele": ["Unknown"] * len(self.peptides),
+                    "netmhciipan_score": [pd.NA] * len(self.peptides),
+                    "netmhciipan_affinity": [pd.NA] * len(self.peptides),
+                    "netmhciipan_percentile_rank": [pd.NA] * len(self.peptides),
                 }
             )
         else:
             idx = valid_predictions.groupby("Peptide")["percentile_rank"].idxmin()
-
-            best_allele_features = valid_predictions.loc[idx].rename(
+            allele_features = valid_predictions.loc[idx].rename(
                 columns={
-                    "allele": "netmhciipan_best_allele",
-                    "score": "netmhciipan_best_score",
-                    "affinity": "netmhciipan_best_affinity",
-                    "percentile_rank": "netmhciipan_best_percentile_rank",
+                    "allele": "netmhciipan_allele",
+                    "score": "netmhciipan_score",
+                    "affinity": "netmhciipan_affinity",
+                    "percentile_rank": "netmhciipan_percentile_rank",
                 }
-            )
-            best_allele_features = best_allele_features[
+            )[
                 [
                     "Peptide",
-                    "netmhciipan_best_allele",
-                    "netmhciipan_best_score",
-                    "netmhciipan_best_affinity",
-                    "netmhciipan_best_percentile_rank",
+                    "netmhciipan_allele",
+                    "netmhciipan_score",
+                    "netmhciipan_affinity",
+                    "netmhciipan_percentile_rank",
                 ]
             ]
 
-            missing_peptides = set(self.peptides) - set(best_allele_features["Peptide"])
+            missing_peptides = set(self.peptides) - set(allele_features["Peptide"])
             if missing_peptides:
-                logger.warning(
-                    f"Found {len(missing_peptides)} peptides with no best allele prediction."
-                )
+                logger.warning(f"Found {len(missing_peptides)} peptides with no prediction.")
                 missing_features = pd.DataFrame(
                     {
                         "Peptide": list(missing_peptides),
-                        "netmhciipan_best_allele": ["Unknown"] * len(missing_peptides),
-                        "netmhciipan_best_score": [pd.NA] * len(missing_peptides),
-                        "netmhciipan_best_affinity": [pd.NA] * len(missing_peptides),
-                        "netmhciipan_best_percentile_rank": [pd.NA] * len(missing_peptides),
+                        "netmhciipan_allele": ["Unknown"] * len(missing_peptides),
+                        "netmhciipan_score": [pd.NA] * len(missing_peptides),
+                        "netmhciipan_affinity": [pd.NA] * len(missing_peptides),
+                        "netmhciipan_percentile_rank": [pd.NA] * len(missing_peptides),
                     }
                 )
-                best_allele_features = pd.concat(
-                    [best_allele_features, missing_features], ignore_index=True
-                )
+                allele_features = pd.concat([allele_features, missing_features], ignore_index=True)
 
-        features_df = features_df.merge(best_allele_features, on="Peptide", how="left")
-        logger.info("Added best allele information.")
+        features_df = features_df.merge(allele_features, on="Peptide", how="left")
         return features_df
 
     def _fill_missing_values(self, features_df: pd.DataFrame) -> pd.DataFrame:
-        logger.info("Filling missing values in the features DataFrame.")
+        if "netmhciipan_allele" in features_df.columns:
+            features_df["netmhciipan_allele"] = features_df["netmhciipan_allele"].fillna("Unknown")
 
-        if "netmhciipan_best_allele" in features_df.columns:
-            features_df["netmhciipan_best_allele"] = features_df["netmhciipan_best_allele"].fillna(
-                "Unknown"
-            )
-
-        if self.mode == "all":
-            for allele in self.alleles:
-                for metric in ["score", "affinity", "percentile_rank"]:
-                    col = f"netmhciipan_{metric}_{allele}"
-                    if col in features_df.columns:
-                        features_df[col] = features_df[col].fillna(features_df[col].median())
-
-        for metric in ["best_score", "best_affinity", "best_percentile_rank"]:
-            col = f"netmhciipan_{metric}"
+        for col in ["netmhciipan_score", "netmhciipan_affinity", "netmhciipan_percentile_rank"]:
             if col in features_df.columns and features_df[col].isna().any():
                 median_value = features_df[col].median()
                 features_df[col] = features_df[col].fillna(
                     0 if pd.isna(median_value) else median_value
                 )
-
-        logger.info("Filled missing values in the features DataFrame.")
         return features_df
 
     @classmethod
@@ -431,7 +304,6 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         return cls(
             peptides=list(set(psms.peptides)),
             alleles=config.get("allele", []),
-            mode=params.get("mode", "best"),
             remove_pre_nxt_aa=config["removePreNxtAA"],
             remove_modification=True,
             n_processes=config.get("numProcesses", 1),
