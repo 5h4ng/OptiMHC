@@ -55,6 +55,18 @@ After downloading and extracting, follow the installation instructions provided 
 
 OptiMHC calls these tools via the [mhctools](https://github.com/openvax/mhctools) library, which invokes `netMHCpan` and `netMHCIIpan` as command-line programs. If they are not on your `PATH`, the prediction step will fail with a "command not found" error.
 
+You can also set the executable path per feature generator instead of modifying `PATH`:
+
+```yaml
+featureGenerator:
+  - name: NetMHCpan
+    params:
+      executablePath: /path/to/netMHCpan
+  - name: NetMHCIIpan
+    params:
+      executablePath: /path/to/netMHCIIpan
+```
+
 ### 3. Test the Installation
 
 ```bash

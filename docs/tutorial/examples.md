@@ -197,6 +197,6 @@ optimhc experiment --config examples/experiment_example.yaml
 | `OverlappingPeptide` | Overlapping peptide score |
 | `ContigFeatures` | Contig-level features from overlapping peptide analysis |
 | `PWM` | Position weight matrix score |
-| `MHCflurry` | MHCflurry binding prediction |
-| `NetMHCpan` | NetMHCpan binding prediction |
-| `NetMHCIIpan` | NetMHCIIpan binding prediction |
+| `MHCflurry` | MHCflurry binding, processing, and presentation prediction |
+| `NetMHCpan` | NetMHCpan class I binding affinity prediction |
+| `NetMHCIIpan` | NetMHCIIpan class II binding affinity prediction |

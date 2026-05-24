@@ -1,4 +1,4 @@
-# Antigen Processing and Presentation Scores
+# Binding Affinity and Presentation Scores
 
 OptiMHC integrates three external tools for predicting MHC binding affinity and antigen presentation. These tools provide complementary information about whether a peptide is likely to be naturally presented on the cell surface by MHC molecules.
 
@@ -6,22 +6,22 @@ OptiMHC integrates three external tools for predicting MHC binding affinity and 
 
 **Config name:** `NetMHCpan` | **Source name:** `NetMHCpan`
 
-[NetMHCpan 4.1](https://services.healthtech.dtu.dk/services/NetMHCpan-4.1/) predicts peptide binding to MHC Class I molecules using artificial neural networks trained on binding affinity and eluted ligand data.
+[NetMHCpan 4.1](https://services.healthtech.dtu.dk/services/NetMHCpan-4.1/) predicts peptide binding to MHC Class I molecules. OptiMHC uses NetMHCpan in binding affinity (BA) mode.
 
 ### Output Columns
 
 | Column | Description |
 |---|---|
-| `netmhcpan_best_score` | Binding score for the best allele |
-| `netmhcpan_best_affinity` | Predicted binding affinity (nM) for the best allele |
-| `netmhcpan_best_percentile_rank` | Percentile rank for the best allele |
+| `netmhcpan_score` | Binding score for the selected allele |
+| `netmhcpan_affinity` | Predicted binding affinity (nM) for the selected allele |
+| `netmhcpan_percentile_rank` | Percentile rank for the selected allele |
 
 ### Computation
 
 1. **Preprocess** peptide sequences: strip flanking amino acids and remove modifications.
 2. **Filter** peptides to length 8–30 (the supported range for NetMHCpan).
-3. **Predict** binding for all peptide-allele combinations using `NetMHCpan 4.1`.
-4. **Best allele selection**: for each peptide, select the allele \( a^* \) with the minimum percentile rank \( r \):
+3. **Predict** binding affinity for all peptide-allele combinations using `NetMHCpan 4.1 BA`.
+4. **Allele selection**: for each peptide, select the allele \( a^* \) with the minimum percentile rank \( r \):
 
 \[
 a^* = \arg\min_{a} \; r(\text{peptide}, a)
@@ -34,6 +34,15 @@ Missing values (peptides outside the length range) are filled with the column me
 ```yaml
 featureGenerator:
   - name: NetMHCpan
+```
+
+If `netMHCpan` is not on your `PATH`, provide the executable explicitly:
+
+```yaml
+featureGenerator:
+  - name: NetMHCpan
+    params:
+      executablePath: /path/to/netMHCpan
 ```
 
 !!! warning "External installation required"
@@ -51,16 +60,16 @@ featureGenerator:
 
 | Column | Description |
 |---|---|
-| `netmhciipan_best_score` | Binding score for the best allele |
-| `netmhciipan_best_affinity` | Predicted binding affinity (nM) for the best allele |
-| `netmhciipan_best_percentile_rank` | Percentile rank for the best allele |
+| `netmhciipan_score` | Binding score for the selected allele |
+| `netmhciipan_affinity` | Predicted binding affinity (nM) for the selected allele |
+| `netmhciipan_percentile_rank` | Percentile rank for the selected allele |
 
 ### Computation
 
 1. **Preprocess** peptide sequences: strip flanking amino acids and remove modifications.
 2. **Filter** peptides to length 9–50 (the supported range for NetMHCIIpan).
 3. **Predict** binding for all peptide-allele combinations using `NetMHCIIpan 4.3 BA`.
-4. **Best allele selection**: for each peptide, select the allele with the minimum percentile rank.
+4. **Allele selection**: for each peptide, select the allele with the minimum percentile rank.
 
 Missing values are filled with the column median.
 
@@ -69,6 +78,15 @@ Missing values are filled with the column median.
 ```yaml
 featureGenerator:
   - name: NetMHCIIpan
+```
+
+If `netMHCIIpan` is not on your `PATH`, provide the executable explicitly:
+
+```yaml
+featureGenerator:
+  - name: NetMHCIIpan
+    params:
+      executablePath: /path/to/netMHCIIpan
 ```
 
 !!! warning "External installation required"
