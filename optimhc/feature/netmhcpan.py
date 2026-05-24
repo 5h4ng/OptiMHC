@@ -16,18 +16,18 @@ from .base_feature_generator import BaseFeatureGenerator
 logger = logging.getLogger(__name__)
 
 
-# Module-level state for each worker process; set by _init_worker.
+# Each worker process gets its own copy of this global.
+# Pool(initializer=_init_worker) sets it once per process,
+# so netMHCpan is called O(processes) not O(chunks).
 _worker_predictor: Optional[NetMHCpan41] = None
 
 
 def _init_worker(alleles: List[str], program_name: str) -> None:
-    """Initialize one NetMHCpan predictor per worker process."""
     global _worker_predictor
     _worker_predictor = NetMHCpan41(alleles=alleles, program_name=program_name)
 
 
 def _predict_peptide_chunk(peptides_chunk: List[str]) -> pd.DataFrame:
-    """Run predictions for a chunk of peptides using the worker's predictor."""
     return _worker_predictor.predict_peptides(peptides_chunk).to_dataframe()
 
 

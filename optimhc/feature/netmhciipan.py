@@ -1,6 +1,7 @@
 # TODO: set 'BA' and 'EL' as optional parameters for the user to choose the prediction method.
 
 import logging
+import os
 from multiprocessing import Pool, cpu_count
 from typing import List, Optional
 
@@ -15,18 +16,23 @@ from optimhc.feature.factory import feature_generator_factory
 logger = logging.getLogger(__name__)
 
 
-# Module-level state for each worker process; set by _init_worker.
+# Each worker process gets its own copy of this global.
+# Pool(initializer=_init_worker) sets it once per process,
+# so netMHCIIpan is called O(processes) not O(chunks).
 _worker_predictor: Optional[NetMHCIIpan43_BA] = None
 
 
 def _init_worker(alleles: List[str], program_name: str) -> None:
-    """Initialize one NetMHCIIpan predictor per worker process."""
     global _worker_predictor
+    # mhctools uses program_name as a tempfile prefix — pass basename, add dir to PATH.
+    exe_dir = os.path.dirname(program_name)
+    if exe_dir:
+        os.environ["PATH"] = exe_dir + os.pathsep + os.environ.get("PATH", "")
+        program_name = os.path.basename(program_name)
     _worker_predictor = NetMHCIIpan43_BA(alleles=alleles, program_name=program_name)
 
 
 def _predict_peptide_chunk(peptides_chunk: List[str]) -> pd.DataFrame:
-    """Run predictions for a chunk of peptides using the worker's predictor."""
     return _worker_predictor.predict_peptides(peptides_chunk).to_dataframe()
 
 
@@ -101,6 +107,11 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         self.n_processes = min(n_processes, cpu_count())
         self.show_progress = show_progress
         self.executable_path = executable_path
+        # mhctools uses program_name as a tempfile prefix — pass basename, add dir to PATH.
+        exe_dir = os.path.dirname(executable_path)
+        if exe_dir:
+            os.environ["PATH"] = exe_dir + os.pathsep + os.environ.get("PATH", "")
+            executable_path = os.path.basename(executable_path)
         self.predictor = NetMHCIIpan43_BA(alleles=self.alleles, program_name=executable_path)
         self.predictions = None
         self._raw_predictions = None
