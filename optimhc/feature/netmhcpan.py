@@ -1,9 +1,8 @@
 # TODO: Except 'best' mode, the other modes seems to be not working properly. We need to investigate this issue.
 
 import logging
-from functools import partial
 from multiprocessing import Pool, cpu_count
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 from mhctools import NetMHCpan41
@@ -17,31 +16,19 @@ from .base_feature_generator import BaseFeatureGenerator
 logger = logging.getLogger(__name__)
 
 
-# Helper function for multiprocessing
-def _predict_peptide_chunk(peptides_chunk: List[str], alleles: List[str]) -> pd.DataFrame:
-    """
-    Predict NetMHCpan scores for a chunk of peptides.
+# Module-level state for each worker process; set by _init_worker.
+_worker_predictor: Optional[NetMHCpan41] = None
 
-    Parameters
-    ----------
-    peptides_chunk : List[str]
-        List of peptide sequences.
-    alleles : List[str]
-        List of MHC allele names.
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame containing predictions:
-        - peptide: Peptide sequence
-        - allele: MHC allele
-        - score: Raw binding score
-        - affinity: Binding affinity in nM
-        - percentile_rank: Percentile rank
-    """
-    predictor = NetMHCpan41(alleles=alleles)
-    results = predictor.predict_peptides(peptides_chunk)
-    return results.to_dataframe()
+def _init_worker(alleles: List[str], program_name: str) -> None:
+    """Initialize one NetMHCpan predictor per worker process."""
+    global _worker_predictor
+    _worker_predictor = NetMHCpan41(alleles=alleles, program_name=program_name)
+
+
+def _predict_peptide_chunk(peptides_chunk: List[str]) -> pd.DataFrame:
+    """Run predictions for a chunk of peptides using the worker's predictor."""
+    return _worker_predictor.predict_peptides(peptides_chunk).to_dataframe()
 
 
 class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
@@ -73,6 +60,8 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
         Default is 1 (no multiprocessing).
     show_progress : bool, optional
         Whether to display a progress bar. Default is False.
+    executable_path : str, optional
+        Path to the netMHCpan executable. Defaults to "netMHCpan" (PATH lookup).
 
     Notes
     -----
@@ -95,6 +84,7 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
         remove_modification: bool = True,
         n_processes: int = 1,
         show_progress: bool = False,
+        executable_path: str = "netMHCpan",
         *args,
         **kwargs,
     ):
@@ -111,7 +101,8 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
         self.remove_modification = remove_modification
         self.n_processes = min(n_processes, cpu_count())
         self.show_progress = show_progress
-        self.predictor = NetMHCpan41(alleles=self.alleles)
+        self.executable_path = executable_path
+        self.predictor = NetMHCpan41(alleles=self.alleles, program_name=executable_path)
         self.predictions = None
         self._raw_predictions = None
         logger.info(
@@ -195,6 +186,9 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
         """
         Run NetMHCpan predictions using multiprocessing.
 
+        One predictor is initialized per worker process (via Pool initializer),
+        so netMHCpan -listMHC is called once per process rather than once per chunk.
+
         Parameters
         ----------
         peptides_to_predict : List[str]
@@ -203,58 +197,32 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
         Returns
         -------
         pd.DataFrame
-            DataFrame containing the prediction results:
-            - peptide: Peptide sequence
-            - allele: MHC allele
-            - score: Raw binding score
-            - affinity: Binding affinity in nM
-            - percentile_rank: Percentile rank
-
-        Notes
-        -----
-        This method:
-        1. Splits peptides into chunks
-        2. Processes chunks in parallel
-        3. Combines results into a single DataFrame
+            DataFrame with columns: peptide, allele, score, affinity, percentile_rank.
         """
         logger.info("Running NetMHCpan predictions with multiprocessing.")
-        chunksize = min(
+        chunk_size = min(
             NetMHCpanFeatureGenerator.CHUNKSIZE,
             max(1, len(peptides_to_predict) // self.n_processes),
         )
-        func = partial(_predict_peptide_chunk, alleles=self.alleles)
+        chunks = [
+            peptides_to_predict[i : i + chunk_size]
+            for i in range(0, len(peptides_to_predict), chunk_size)
+        ]
 
-        with Pool(processes=self.n_processes) as pool:
+        with Pool(
+            processes=self.n_processes,
+            initializer=_init_worker,
+            initargs=(self.alleles, self.executable_path),
+        ) as pool:
+            it = pool.imap(_predict_peptide_chunk, chunks)
             if self.show_progress:
-                results = list(
-                    tqdm(
-                        pool.imap(
-                            func,
-                            [
-                                peptides_to_predict[i : i + chunksize]
-                                for i in range(0, len(peptides_to_predict), chunksize)
-                            ],
-                        ),
-                        total=(len(peptides_to_predict) + chunksize - 1) // chunksize,
-                        desc="Predicting NetMHCpan",
-                    )
-                )
-            else:
-                results = pool.map(
-                    func,
-                    [
-                        peptides_to_predict[i : i + chunksize]
-                        for i in range(0, len(peptides_to_predict), chunksize)
-                    ],
-                )
+                it = tqdm(it, total=len(chunks), desc="Predicting NetMHCpan")
+            results = list(it)
 
-        netmhcpan_results = pd.concat(results, ignore_index=True)
-        # Save the raw prediction results
-        self._raw_predictions = netmhcpan_results.copy()
         logger.info(
             f"Completed multiprocessing predictions for {len(peptides_to_predict)} peptides."
         )
-        return netmhcpan_results
+        return pd.concat(results, ignore_index=True)
 
     def _predict(self) -> pd.DataFrame:
         """
@@ -312,9 +280,8 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
             netmhcpan_results = self._predict_multiprocessing(peptides_to_predict)
         else:
             netmhcpan_results = self.predictor.predict_peptides(peptides_to_predict).to_dataframe()
-            # If not using multiprocessing, save raw prediction results here
-            self._raw_predictions = netmhcpan_results.copy()
 
+        self._raw_predictions = netmhcpan_results.copy()
         logger.info(f"Predicted NetMHCpan results for {len(netmhcpan_results)} peptides.")
 
         self.predictions = self.predictions.merge(
@@ -654,26 +621,6 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
             raise ValueError("No predictions available. Please run 'generate_features' first.")
         return self.predictions
 
-    # def get_best_allele(self) -> pd.DataFrame:
-    #     """
-    #     Return the best allele (with the lowest percentile rank) for each peptide across all alleles.
-
-    #     Returns:
-    #         pd.DataFrame: DataFrame containing the best allele information.
-    #     """
-    #     logger.info("Getting best allele information.")
-    #     predictions_df = self._predict()
-
-    #     features_df = pd.DataFrame({'Peptide': self.peptides})
-    #     best_features_df = self._generate_best_allele_features(predictions_df, features_df)
-    #     best_columns = ['Peptide', 'netmhcpan_best_allele', 'netmhcpan_best_score',
-    #                      'netmhcpan_best_affinity', 'netmhcpan_best_percentile_rank']
-    #     best_allele_df = best_features_df[best_columns]
-    #     best_allele_df = self._fill_missing_values(best_allele_df)
-
-    #     logger.info(f"Generated best allele information for {len(best_allele_df)} peptides.")
-    #     return best_allele_df
-
     @classmethod
     def from_config(cls, psms, config, params):
         return cls(
@@ -684,6 +631,7 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
             remove_modification=True,
             n_processes=config.get("numProcesses", 1),
             show_progress=config.get("showProgress", False),
+            executable_path=params.get("executablePath", "netMHCpan"),
         )
 
 

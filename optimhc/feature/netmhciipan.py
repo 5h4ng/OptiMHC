@@ -1,9 +1,8 @@
 # TODO: set 'BA' and 'EL' as optional parameters for the user to choose the prediction method.
 
 import logging
-from functools import partial
 from multiprocessing import Pool, cpu_count
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 from mhctools import NetMHCIIpan43_BA
@@ -16,20 +15,19 @@ from optimhc.feature.factory import feature_generator_factory
 logger = logging.getLogger(__name__)
 
 
-def _predict_peptide_chunk_class2(peptides_chunk: List[str], alleles: List[str]) -> pd.DataFrame:
-    """
-    Use NetMHCIIpan43_BA to predict a batch of peptides (MHC Class II).
+# Module-level state for each worker process; set by _init_worker.
+_worker_predictor: Optional[NetMHCIIpan43_BA] = None
 
-    Parameters:
-        peptides_chunk (List[str]): A batch of peptide sequences to predict.
-        alleles (List[str]): List of MHC Class II alleles, e.g., ['DRB1_0101', 'DRB1_0102'].
 
-    Returns:
-        pd.DataFrame: A DataFrame containing prediction results.
-    """
-    predictor = NetMHCIIpan43_BA(alleles=alleles)
-    results = predictor.predict_peptides(peptides_chunk)
-    return results.to_dataframe()
+def _init_worker(alleles: List[str], program_name: str) -> None:
+    """Initialize one NetMHCIIpan predictor per worker process."""
+    global _worker_predictor
+    _worker_predictor = NetMHCIIpan43_BA(alleles=alleles, program_name=program_name)
+
+
+def _predict_peptide_chunk(peptides_chunk: List[str]) -> pd.DataFrame:
+    """Run predictions for a chunk of peptides using the worker's predictor."""
+    return _worker_predictor.predict_peptides(peptides_chunk).to_dataframe()
 
 
 class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
@@ -60,6 +58,8 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         Number of processes to use. Default is 1 (no multiprocessing).
     show_progress : bool, optional
         Whether to display a progress bar. Default is False.
+    executable_path : str, optional
+        Path to the netMHCIIpan executable. Defaults to "netMHCIIpan" (PATH lookup).
 
     Notes
     -----
@@ -82,6 +82,7 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         remove_modification: bool = True,
         n_processes: int = 1,
         show_progress: bool = False,
+        executable_path: str = "netMHCIIpan",
         *args,
         **kwargs,
     ):
@@ -99,7 +100,8 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         self.remove_modification = remove_modification
         self.n_processes = min(n_processes, cpu_count())
         self.show_progress = show_progress
-        self.predictor = NetMHCIIpan43_BA(alleles=self.alleles)
+        self.executable_path = executable_path
+        self.predictor = NetMHCIIpan43_BA(alleles=self.alleles, program_name=executable_path)
         self.predictions = None
         self._raw_predictions = None
 
@@ -186,6 +188,9 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         """
         Run NetMHCIIpan predictions using multiprocessing.
 
+        One predictor is initialized per worker process (via Pool initializer),
+        so netMHCIIpan -list is called once per process rather than once per chunk.
+
         Parameters
         ----------
         peptides_to_predict : List[str]
@@ -194,58 +199,32 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         Returns
         -------
         pd.DataFrame
-            DataFrame containing the prediction results:
-            - peptide: Peptide sequence
-            - allele: MHC allele
-            - score: Raw binding score
-            - affinity: Binding affinity in nM
-            - percentile_rank: Percentile rank
-
-        Notes
-        -----
-        This method:
-        1. Splits peptides into chunks
-        2. Processes chunks in parallel
-        3. Combines results into a single DataFrame
+            DataFrame with columns: peptide, allele, score, affinity, percentile_rank.
         """
         logger.info("Running NetMHCIIpan predictions with multiprocessing.")
-        chunksize = min(
+        chunk_size = min(
             NetMHCIIpanFeatureGenerator.CHUNKSIZE,
             max(1, len(peptides_to_predict) // self.n_processes),
         )
-        func = partial(_predict_peptide_chunk_class2, alleles=self.alleles)
+        chunks = [
+            peptides_to_predict[i : i + chunk_size]
+            for i in range(0, len(peptides_to_predict), chunk_size)
+        ]
 
-        with Pool(processes=self.n_processes) as pool:
+        with Pool(
+            processes=self.n_processes,
+            initializer=_init_worker,
+            initargs=(self.alleles, self.executable_path),
+        ) as pool:
+            it = pool.imap(_predict_peptide_chunk, chunks)
             if self.show_progress:
-                results = list(
-                    tqdm(
-                        pool.imap(
-                            func,
-                            [
-                                peptides_to_predict[i : i + chunksize]
-                                for i in range(0, len(peptides_to_predict), chunksize)
-                            ],
-                        ),
-                        total=(len(peptides_to_predict) + chunksize - 1) // chunksize,
-                        desc="Predicting NetMHCIIpan",
-                    )
-                )
-            else:
-                results = pool.map(
-                    func,
-                    [
-                        peptides_to_predict[i : i + chunksize]
-                        for i in range(0, len(peptides_to_predict), chunksize)
-                    ],
-                )
+                it = tqdm(it, total=len(chunks), desc="Predicting NetMHCIIpan")
+            results = list(it)
 
-        netmhciipan_results = pd.concat(results, ignore_index=True)
-        # Save the raw prediction results
-        self._raw_predictions = netmhciipan_results.copy()
         logger.info(
             f"Completed multiprocessing predictions for {len(peptides_to_predict)} peptides."
         )
-        return netmhciipan_results
+        return pd.concat(results, ignore_index=True)
 
     def _predict(self) -> pd.DataFrame:
         """
@@ -266,7 +245,7 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         -----
         This method:
         1. Preprocesses peptides
-        2. Filters peptides by length (9-30 amino acids)
+        2. Filters peptides by length (9-50 amino acids)
         3. Runs predictions (with or without multiprocessing)
         4. Merges results with original peptides
         """
@@ -305,9 +284,8 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
             netmhciipan_results = self.predictor.predict_peptides(
                 peptides_to_predict
             ).to_dataframe()
-            # If not using multiprocessing, save raw prediction results here
-            self._raw_predictions = netmhciipan_results.copy()
 
+        self._raw_predictions = netmhciipan_results.copy()
         logger.info(f"Predicted NetMHCIIpan results for {len(netmhciipan_results)} peptides.")
 
         self.predictions = self.predictions.merge(
@@ -657,6 +635,7 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
             remove_modification=True,
             n_processes=config.get("numProcesses", 1),
             show_progress=config.get("showProgress", False),
+            executable_path=params.get("executablePath", "netMHCIIpan"),
         )
 
 
