@@ -23,11 +23,12 @@ class MHCflurryFeatureGenerator(BaseFeatureGenerator):
     peptides : List[str]
         List of peptide sequences.
     alleles : List[str]
-        List of MHC allele names (e.g., ['HLA-A01:01', 'HLA-B07:02']).
+        List of MHC allele names (e.g., ['HLA-A*02:02', 'HLA-B*07:02']).
     remove_pre_nxt_aa : bool, optional
-        Whether to remove the previous and next amino acids from peptides. Default is False.
+        Whether to remove flanking previous/next amino acids from peptide sequences.
+        Default is False.
     remove_modification : bool, optional
-        Whether to remove modifications from peptides. Default is True.
+        Whether to remove peptide modification annotations. Default is True.
 
     Notes
     -----

@@ -40,7 +40,7 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
     model_path : str, optional
         Path to the DeepLC model. If None, the default model will be used.
     remove_pre_nxt_aa : bool, optional
-        Whether to remove the first and last amino acids from the peptide sequence.
+        Whether to remove flanking previous/next amino acids from peptide sequences.
         Default is True.
     mod_dict : dict, optional
         Dictionary of modifications to be used for DeepLC. If None, no modifications
@@ -94,7 +94,7 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         model_path : str
             Path to the DeepLC model. If None, the default model will be used.
         remove_pre_nxt_aa : bool
-            Whether to remove the first and last amino acids from the peptide sequence.
+            Whether to remove flanking previous/next amino acids from peptide sequences.
             Default: True.
         mod_dict : dict
             Dictionary of modifications to be used for DeepLC. If None, no modifications

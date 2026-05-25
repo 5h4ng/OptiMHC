@@ -46,11 +46,12 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
     peptides : List[str]
         List of peptide sequences.
     alleles : List[str]
-        List of MHC Class II alleles, e.g., ['DRB1_0101', 'DRB1_0102'].
+        List of MHC Class II alleles, e.g., ['HLA-DPA1*02:01-DPB1*01:01'].
     remove_pre_nxt_aa : bool, optional
-        Whether to remove the amino acids flanking the peptide. Default is True.
+        Whether to remove flanking previous/next amino acids from peptide sequences.
+        Default is True.
     remove_modification : bool, optional
-        Whether to remove modification information from peptides. Default is True.
+        Whether to remove peptide modification annotations. Default is True.
     n_processes : int, optional
         Number of processes to use. Default is 1.
     show_progress : bool, optional
@@ -134,7 +135,7 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         Run NetMHCIIpan predictions using multiprocessing.
 
         One predictor is initialized per worker process (via Pool initializer),
-        so netMHCIIpan -list is called once per process rather than once per chunk.
+        so allele metadata is loaded once per process rather than once per chunk.
         """
         logger.info("Running NetMHCIIpan predictions with multiprocessing.")
         chunk_size = min(

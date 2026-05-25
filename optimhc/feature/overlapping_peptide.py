@@ -40,9 +40,10 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
     fill_missing : str, optional
         Method to fill missing values for filtered peptides. Options are 'median' or 'zero'. Default is 'median'.
     remove_pre_nxt_aa : bool, optional
-        Whether to remove the preceding and following amino acids from peptides. Default is False.
+        Whether to remove flanking previous/next amino acids from peptide sequences.
+        Default is False.
     remove_modification : bool, optional
-        Whether to remove modifications from peptides. Default is True.
+        Whether to remove peptide modification annotations. Default is True.
 
     Attributes
     ----------
@@ -59,9 +60,9 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
     fill_missing : str
         Method to fill missing values.
     remove_pre_nxt_aa : bool
-        Whether to remove preceding and following amino acids.
+        Whether to remove flanking previous/next amino acids.
     remove_modification : bool
-        Whether to remove modifications.
+        Whether to remove peptide modification annotations.
     filtered_peptides : list of str
         List of peptides after filtering.
     filtered_indices : list of int

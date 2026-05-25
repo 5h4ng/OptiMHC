@@ -85,7 +85,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
     peptides : list of str
         Series of peptide sequences.
     alleles : list of str
-        List of MHC allele names (e.g., ['HLA-A01:01', 'HLA-B07:02']).
+        List of MHC allele names (e.g., ['HLA-A*02:02', 'HLA-B*07:02']).
     anchors : int, optional
         Number of anchor positions to consider for MHC class I. Default is 2.
     mhc_class : str, optional
@@ -93,11 +93,10 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
     pwm_path : str or os.PathLike, optional
         Custom path to PWM files. Defaults to '../../data/PWMs'.
     remove_pre_nxt_aa : bool, optional
-        Whether to include the previous and next amino acids in peptides.
-        If True, remove them. Default is False.
+        Whether to remove flanking previous/next amino acids from peptide sequences.
+        Default is False.
     remove_modification : bool, optional
-        Whether to include modifications in peptides.
-        If True, remove them. Default is True.
+        Whether to remove peptide modification annotations. Default is True.
 
     Attributes
     ----------
@@ -114,9 +113,9 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
     anchors : int
         Number of anchor positions for MHC class I.
     remove_pre_nxt_aa : bool
-        Whether to remove pre/post neighboring amino acids.
+        Whether to remove flanking previous/next amino acids.
     remove_modification : bool
-        Whether to remove modifications.
+        Whether to remove peptide modification annotations.
 
     Notes
     -----
@@ -148,13 +147,13 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
 
         Parameters:
             peptides (List[str]): Series of peptide sequences.
-            alleles (List[str]): List of MHC allele names (e.g., ['HLA-A01:01', 'HLA-B07:02']).
+            alleles (List[str]): List of MHC allele names (e.g., ['HLA-A*02:02', 'HLA-B*07:02']).
             mhc_class (str): MHC class, either 'I' or 'II'. Default is 'I'.
             pwm_path (Optional[Union[str, os.PathLike]]): Custom path to PWM files. Defaults to '../../data/PWMs'.
-            remove_pre_nxt_aa (bool): Whether to include the previous and next amino acids in peptides.
-                If True, remove them. Default is False.
-            remove_modification (bool): Whether to include modifications in peptides.
-                If True, remove them. Default is True.
+            remove_pre_nxt_aa (bool): Whether to remove flanking previous/next amino acids
+                from peptide sequences. Default is False.
+            remove_modification (bool): Whether to remove peptide modification annotations.
+                Default is True.
         """
         self.peptides = pd.Series(peptides)
         self.alleles = alleles
@@ -237,7 +236,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
         Notes
         -----
         For MHC class I:
-            - Allele directory format: HLA-A01:01 -> HLA-A01_01
+            - Allele directory format: HLA-A*02:02 -> HLA-A02_02
         For MHC class II:
             - Allele directory format: DRB10101 -> DRB1_0101
             - Fixed core length of 9

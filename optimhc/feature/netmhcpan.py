@@ -43,9 +43,10 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
     alleles : List[str]
         List of MHC allele names (e.g., ['HLA-A*02:01', 'HLA-B*07:02']).
     remove_pre_nxt_aa : bool, optional
-        Whether to remove the previous and next amino acids from peptides. Default is False.
+        Whether to remove flanking previous/next amino acids from peptide sequences.
+        Default is False.
     remove_modification : bool, optional
-        Whether to remove modifications from peptides. Default is True.
+        Whether to remove peptide modification annotations. Default is True.
     n_processes : int, optional
         Number of processes to use for multiprocessing. Default is 1.
     show_progress : bool, optional
@@ -121,7 +122,7 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
         Run NetMHCpan predictions using multiprocessing.
 
         One predictor is initialized per worker process (via Pool initializer),
-        so netMHCpan -listMHC is called once per process rather than once per chunk.
+        so allele metadata is loaded once per process rather than once per chunk.
         """
         logger.info("Running NetMHCpan predictions with multiprocessing.")
         chunk_size = min(

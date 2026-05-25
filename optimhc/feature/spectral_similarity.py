@@ -39,9 +39,11 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
     collision_energies : list of float
         List of collision energies, required when model_type is "HCD".
     remove_pre_nxt_aa : bool
-        Whether to remove preceding and next amino acids, default is True.
-    remove_modification : bool
-        Whether to remove modifications, default is True.
+        Whether to remove flanking previous/next amino acids from peptide sequences.
+        Default is False.
+    mod_dict : dict, optional
+        Mapping used to convert peptide modification annotations for Koina. If None,
+        peptide modification annotations are removed.
     url : str
         Koina server URL, default is "koina.wilhelmlab.org:443".
     top_n : int
