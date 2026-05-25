@@ -47,7 +47,7 @@ The pipeline can be configured by using a YAML file. This file defines the input
 | `showProgress`     | Boolean              | `True`                          | Show progress information during execution.                                                                                                                                                     |
 | `logLevel`         | String               | `INFO`                          | Logging level (DEBUG, INFO, WARNING, ERROR). Default is "INFO".                                                                                                                                 |
 | `modificationMap`  | Dictionary           | `{ '147.035385': 'UNIMOD:35' }` | Maps FULL modified residue masses (amino acid+modification) to their 'UNIMOD' identifiers. These masses can be found in the pepXML parameters section. See https://www.unimod.org/ for details. |
-| `allele`           | List                 | `[HLA-A*02:02]`                 | List of alleles for which predictions will be computed.                                                                                                                                         |
+| `allele`           | List                 | `[HLA-A*02:02]`                 | List of alleles for MHC binding and PWM features. Use names such as `HLA-A*02:02`, `HLA-B*07:02`, or Class II paired names such as `HLA-DPA1*02:01-DPB1*01:01`. PWM additionally requires a matching matrix under `optimhc/PWMs/`. |
 | `toFlashLFQ`       | Boolean              | `True`                          | Whether to export the rescored results at the FDR threshold defined in `rescore.testFDR` into a FlashLFQ‑compatible format for downstream quantification.                                       |
 | `featureGenerator` | List of Dictionaries | See table below                 | List of feature generator configurations (each with a `name` and optional `params`).                                                                                                            |
 | `rescore`          | Dictionary           | See table below                 | Rescore settings including FDR threshold, model and number of jobs.                                                                                                                             |
@@ -133,7 +133,7 @@ featureGenerator:
   - name: MHCflurry
   - name: NetMHCpan
     params:
-      executablePath: /path/to/netMHCpan  # optional; omit if netMHCpan is on PATH
+      executablePath: /path/to/netMHCpan
 
 # Rescore settings
 rescore:

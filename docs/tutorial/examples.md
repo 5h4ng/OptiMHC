@@ -47,7 +47,9 @@ allele:
   - HLA-A*02:02
 ```
 
-Specifies the MHC allele(s) for binding prediction tools. For Class I, use standard HLA nomenclature (e.g., `HLA-A*02:01`).
+Specifies the MHC allele(s) for binding prediction tools. Use standard HLA nomenclature in config files.
+
+The same allele list is used by NetMHCpan, NetMHCIIpan, MHCflurry, and PWM when those features are enabled. For Class I, use names such as `HLA-A*02:02` or `HLA-B*07:02`. For Class II, current examples use paired DP/DQ names such as `HLA-DPA1*02:01-DPB1*01:01`. PWM requires a matching local matrix under `optimhc/PWMs/`; see [PWM Score](features/pwm.md#allele-support-and-format).
 
 ### Features
 
