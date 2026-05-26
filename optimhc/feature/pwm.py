@@ -347,7 +347,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
                     logger.error(f"PWM file not found: {file_path}")
                     raise FileNotFoundError(f"PWM file not found: {file_path}")
                 try:
-                    pwm = pd.read_csv(file_path, sep="\s+", header=None, index_col=0)
+                    pwm = pd.read_csv(file_path, sep=r"\s+", header=None, index_col=0)
                     pwm.columns = [f"{pos + 1}" for pos in range(pwm.shape[1])]
                     pwms[allele][mer] = pwm
                     logger.debug(f"Loaded PWM for allele {allele}, length {mer} from {file_path}")
