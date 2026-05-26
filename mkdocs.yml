@@ -6,16 +6,18 @@ repo_name: 5h4ng/OptiMHC
 
 theme:
   name: material
+  logo: assets/icon.svg
+  favicon: assets/icon.svg
   palette:
     - scheme: default
-      primary: indigo
-      accent: indigo
+      primary: white
+      accent: white
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: white
+      accent: white
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -78,7 +80,7 @@ nav:
       - Basic Features: tutorial/features/basic.md
       - Spectral Similarity: tutorial/features/spectral-similarity.md
       - Retention Time Deviation: tutorial/features/rt-deviation.md
-      - Antigen Presentation Scores: tutorial/features/antigen-presentation.md
+      - Binding Affinity: tutorial/features/binding-affinity.md
       - PWM Score: tutorial/features/pwm.md
       - Overlapping Peptide Score: tutorial/features/overlapping.md
   - API Reference:

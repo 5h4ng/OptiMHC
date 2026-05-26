@@ -20,7 +20,7 @@ Features are configured in the YAML file as a list of `{name, params}` entries. 
 | [Basic Features](basic.md) | `Basic` | 5 | Peptide sequence properties (length, entropy, AA composition) |
 | [Spectral Similarity](spectral-similarity.md) | `SpectralSimilarity` | 8 | Similarity between experimental and predicted spectra |
 | [Retention Time Deviation](rt-deviation.md) | `DeepLC` | 5 | Deviation between observed and predicted retention time |
-| [Antigen Presentation Scores](antigen-presentation.md) | `NetMHCpan`, `NetMHCIIpan`, `MHCflurry` | 3–4 per tool | MHC binding affinity and presentation predictions |
+| [Binding Affinity](binding-affinity.md) | `NetMHCpan`, `NetMHCIIpan`, `MHCflurry` | 3–4 per tool | MHC binding affinity predictions |
 | [PWM Score](pwm.md) | `PWM` | 1–3 per allele | Position weight matrix binding score |
 | [Overlapping Peptide Score](overlapping.md) | `OverlappingPeptide` | 4 | Graph-based peptide overlap and contig assembly features |
 

@@ -1,10 +1,10 @@
-# Binding Affinity and Presentation Scores
+# Binding Affinity Score
 
-OptiMHC integrates three external tools for predicting MHC binding affinity and antigen presentation. These tools provide complementary information about whether a peptide is likely to be naturally presented on the cell surface by MHC molecules.
+OptiMHC integrates three external tools for predicting MHC binding affinity. These tools provide complementary estimates of peptide-MHC binding strength.
 
 ## Allele Names
 
-Alleles are provided once in the top-level `allele` field and reused by antigen-presentation features and PWM scoring:
+Alleles are provided once in the top-level `allele` field and reused by binding affinity and PWM features:
 
 ```yaml
 allele:
@@ -116,26 +116,22 @@ featureGenerator:
 
 **Config name:** `MHCflurry` | **Source name:** `MHCflurry`
 
-[MHCflurry](https://github.com/openvax/mhcflurry) provides Class I MHC binding affinity predictions along with antigen processing and presentation scores. Unlike NetMHCpan, MHCflurry also models the antigen processing pathway (proteasomal cleavage and TAP transport) in addition to MHC binding.
+[MHCflurry](https://github.com/openvax/mhcflurry) provides Class I MHC binding affinity predictions.
 
 ### Output Columns
 
 | Column | Description |
 |---|---|
 | `mhcflurry_affinity` | Predicted binding affinity (nM) |
-| `mhcflurry_processing_score` | Antigen processing score (likelihood of proteasomal cleavage and TAP transport) |
-| `mhcflurry_presentation_score` | Combined presentation score integrating binding and processing |
-| `mhcflurry_presentation_percentile` | Percentile rank of the presentation score |
+| `mhcflurry_processing_score` | Auxiliary MHCflurry model score |
+| `mhcflurry_presentation_score` | Combined MHCflurry model score |
+| `mhcflurry_presentation_percentile` | Percentile rank of the combined MHCflurry score |
 
 ### Computation
 
 1. **Preprocess** peptide sequences: strip flanking amino acids and remove modifications.
 2. **Filter** peptides to length 8–15 (the supported range for MHCflurry).
-3. **Predict** using `Class1PresentationPredictor`, which returns:
-    - **Affinity** — predicted IC50 binding affinity in nM.
-    - **Processing score** — a score reflecting the likelihood that the peptide undergoes proper antigen processing (proteasomal cleavage, TAP transport).
-    - **Presentation score** — a combined score that integrates binding affinity and processing likelihood.
-    - **Presentation percentile** — the percentile rank of the presentation score relative to a reference distribution.
+3. **Predict** MHCflurry outputs, including affinity and auxiliary model scores.
 
 Missing values (peptides outside the 8–15 length range) are filled with the column median.
 
@@ -152,10 +148,10 @@ No additional parameters are required. The alleles are taken from the top-level 
 
 ## Choosing Between Tools
 
-| Tool | MHC Class | Peptide Length | Scores | External Setup |
+| Tool | MHC Class | Peptide Length | Score | External Setup |
 |---|---|---|---|---|
 | NetMHCpan | I | 8–30 | Binding score, affinity, percentile rank | Manual download, add to `PATH` |
 | NetMHCIIpan | II | 9–50 | Binding score, affinity, percentile rank | Manual download, add to `PATH` |
-| MHCflurry | I | 8–15 | Affinity, processing, presentation, percentile | None (pip installed) |
+| MHCflurry | I | 8–15 | Affinity and auxiliary model scores | None (pip installed) |
 
 For **MHC Class I** analyses, you can use both NetMHCpan and MHCflurry simultaneously — they provide complementary predictions. For **MHC Class II**, NetMHCIIpan is the only option among these three tools.

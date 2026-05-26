@@ -1,8 +1,10 @@
 # OptiMHC
 
+[<img src="img/optimhc_logo.svg" align="right" width="260" alt="OptiMHC logo">](https://github.com/5h4ng/OptiMHC)
+
 **An optimized rescoring pipeline for immunopeptidomics data that significantly enhances peptide identification performance.**
 
-OptiMHC integrates multiple rescoring features with machine learning-based rescoring to maximize the number of confidently identified peptides from mass spectrometry experiments.
+<br clear="right"/>
 
 ## Quick Start
 
@@ -63,7 +65,7 @@ Each feature generator is specified with its `name` and an optional `params` sub
 | `DeepLC`             | `calibrationCriteria: expect`<br>`lowerIsBetter: True`<br>`calibrationSize: 0.1`                                                                                                                                                | Creates retention time predictions by calibrating using DeepLC. The `calibrationCriteria` should be set to a score field in the PSM data (e.g., expect, xcorr, hyperscore).                                                                                                                                                                                                                                                                      |
 | `OverlappingPeptide` | `minOverlapLength: 7`<br>`minLength: 7`<br>`maxLength: 20`<br>`overlappingScore: expect`                                                                                                                                        | Generates overlapping peptide features for grouping similar peptides. The `overlappingScore` should be set to a score field in the PSM data (e.g., expect, xcorr, hyperscore).                                                                                                                                                                                                                                                                   |
 | `PWM`                | `class: I`                                                                                                                                                                                                                      | Generates position weight matrix features for MHC class I and class II peptides.                                                                                                                                                                                                                                                                                                                                                                 |
-| `MHCflurry`          | N/A                                                                                                                                                                                                                             | Predicts class I binding affinity, processing, and presentation scores using MHCflurry.                                                                                                                                                                                                                                                                                                                                                           |
+| `MHCflurry`          | N/A                                                                                                                                                                                                                             | Predicts class I peptide-MHC binding affinity using MHCflurry.                                                                                                                                                                                                                                                                                                                                                                                    |
 | `NetMHCpan`          | `executablePath: /path/to/netMHCpan`                                                                                                                                                                                            | Predicts class I peptide-MHC binding affinity using NetMHCpan BA mode. `executablePath` is optional; omit it when `netMHCpan` is available on `PATH`.                                                                                                                                                                                                                                                                                             |
 | `NetMHCIIpan`        | `executablePath: /path/to/netMHCIIpan`                                                                                                                                                                                          | Predicts class II peptide-MHC binding affinity using NetMHCIIpan BA mode. `executablePath` is optional; omit it when `netMHCIIpan` is available on `PATH`.                                                                                                                                                                                                                                                                                         |
 
@@ -141,106 +143,6 @@ rescore:
   model: Percolator
   numJobs: 4
 ```
-
-### Using Direct Command-Line Parameters (Optional)
-
-While we recommend using the YAML configuration file, you can also use command-line parameters to configure the pipeline:
-
-**Note:** The command-line configuration mode **has not been fully tested**.
-
-```bash
-optimhc pipeline \
-  --inputType pepxml \
-  --inputFile ./data/YE_20180428_SK_HLA_A0202_3Ips_a50mio_R1_01.pep.xml \
-  --decoyPrefix DECOY_ \
-  --outputDir ./results \
-  --visualization \
-  --numProcesses 32 \
-  --allele HLA-A*02:02 \
-  --logLevel INFO \
-  --featureGenerator '{"name": "Basic"}' \
-  --testFDR 0.01 \
-  --model Percolator
-```
-
-**Note:** If you use both YAML configuration file and command-line parameters, command-line parameters will override the corresponding values in the YAML configuration file.
-
-#### Feature Generator Command-line Parameters
-
-The `--featureGenerator` option accepts JSON formatted strings that define the feature generator configuration. You can specify multiple feature generators by using the option multiple times.
-
-But be careful that if you use `--featureGenerator` in command-line, all your feature generator configurations in YAML file (`--config`) will be ignored.
-
-Thus, **rather than using both methods simultaneously, use either command-line arguments or YAML for feature generator configuration.**
-
-Here are some examples:
-
-<details>
-<summary>Basic feature generator (no parameters)</summary>
-
-```bash
---featureGenerator '{"name": "Basic"}'
-```
-
-</details>
-
-<details>
-<summary>SpectralSimilarity with parameters</summary>
-
-```bash
---featureGenerator '{
-  "name": "SpectralSimilarity",
-  "params": {
-    "mzmlDir": "./data",
-    "spectrumIdPattern": "(.+?)\.\d+\.\d+\.\d+",
-    "model": "AlphaPeptDeep_ms2_generic",
-    "collisionEnergy": 28,
-    "instrument": "LUMOS",
-    "tolerance": 20,
-    "numTopPeaks": 36,
-    "url": "koina.wilhelmlab.org:443"
-  }
-}'
-```
-
-</details>
-
-<details>
-<summary>Multiple feature generators</summary>
-
-```bash
---featureGenerator '{"name": "Basic"}' \
---featureGenerator '{
-  "name": "SpectralSimilarity",
-  "params": {
-    "mzmlDir": "./data",
-    "model": "AlphaPeptDeep_ms2_generic"
-  }
-}' \
---featureGenerator '{
-  "name": "DeepLC",
-  "params": {
-    "calibrationCriteria": "expect",
-    "lowerIsBetter": true,
-    "calibrationSize": 0.1
-  }
-}'
-```
-
-</details>
-
-<details>
-<summary>Some tips for JSON format</summary>
-
-- Use single quotes (`'`) to wrap the entire JSON string
-- All JSON strings must be valid JSON format (e.g., use `true` instead of `True`, `false` instead of `False`)
-- For complex parameters, you can use a single line with proper escaping:
-
-```bash
---featureGenerator '{"name":"SpectralSimilarity","params":{"mzmlDir":"./data","model":"AlphaPeptDeep_ms2_generic"}}'
-```
-
-</details>
 
 ### Full CLI Help
 
