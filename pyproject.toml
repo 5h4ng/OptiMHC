@@ -55,7 +55,7 @@ include = ["optimhc*"]
 optimhc = ["PWMs*"]
 
 [tool.ruff]
-exclude = ["docs", "examples"]
+exclude = ["docs"]
 line-length = 99
 target-version = "py311"
 
