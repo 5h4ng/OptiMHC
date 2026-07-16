@@ -1,10 +1,8 @@
 # Examples
 
-OptiMHC ships with example configuration files under the `examples/` directory. This page walks through each one, explaining every section.
+This page provides configuration templates that you can copy into local YAML files and adapt to your data. It explains each section of Class I, Class II, and experiment-mode configurations.
 
 ## MHC Class I Example
-
-**File:** `examples/classI_example.yaml`
 
 This configuration demonstrates a full Class I immunopeptidomics rescoring workflow with all available features.
 
@@ -12,23 +10,25 @@ This configuration demonstrates a full Class I immunopeptidomics rescoring workf
 experimentName: classI_example
 inputType: pepxml
 inputFile:
-  - ../data/YE_20180428_SK_HLA_A0202_3Ips_a50mio_R1_01.pep.xml
+  - /path/to/class_i_search_results.pep.xml
 decoyPrefix: DECOY_
-outputDir: ./examples/results
+outputDir: ./results
 visualization: True
 removePreNxtAA: False
 numProcesses: 32
 showProgress: True
+keepIntermediate: True
 ```
 
 **General settings:**
 
-- `experimentName` — a label used for output file naming.
+- `experimentName` — the output subdirectory name under `outputDir`.
 - `inputType` — the format of your search engine output (`pepxml` or `pin`).
 - `inputFile` — one or more paths to PepXML files.
 - `decoyPrefix` — the prefix used by the search engine to mark decoy protein accessions (default: `DECOY_`).
 - `outputDir` — where results, models, and figures are written.
 - `numProcesses` — number of parallel processes for feature generation.
+- `keepIntermediate` — write supported intermediate artifacts such as the best-prediction `BA.parquet` summary (default: `True`).
 
 ### Modification Mapping
 
@@ -58,7 +58,7 @@ featureGenerator:
   - name: Basic
   - name: SpectralSimilarity
     params:
-      mzmlDir: ../data
+      mzmlDir: /path/to/mzml
       spectrumIdPattern: (.+?)\.\d+\.\d+\.\d+
       model: AlphaPeptDeep_ms2_generic
       collisionEnergy: 28
@@ -104,17 +104,15 @@ rescore:
 
 ## MHC Class II Example
 
-**File:** `examples/classII_example.yaml`
-
 This configuration mirrors the Class I example but is adapted for MHC Class II immunopeptidomics.
 
 ```yaml
 experimentName: classII_example
 inputType: pepxml
 inputFile:
-  - ../data/AG20201214_FAIMS_DPB0101_DPA0201_93e6_1hr.pep.xml
+  - /path/to/class_ii_search_results.pep.xml
 decoyPrefix: DECOY_
-outputDir: ./examples/results
+outputDir: ./results
 ```
 
 ### Key Differences from Class I
@@ -154,8 +152,6 @@ allele:
 
 ## Experiment Mode Example
 
-**File:** `examples/experiment_example.yaml`
-
 Experiment mode runs multiple rescoring experiments with different feature subsets on the same input data, allowing you to compare the contribution of individual features.
 
 The general settings and features are defined once at the top. The `experiments` section then defines each experiment:
@@ -179,10 +175,10 @@ Each experiment specifies:
 - `source` — a list of feature sources to include. These correspond to the source names registered by each feature (e.g., `"Original"` from the parser, `"Basic"` from Basic, etc.).
 - `model` — the rescoring model to use for this experiment.
 
-Run experiment mode with:
+Save the completed configuration as a local YAML file, then run experiment mode with:
 
 ```bash
-optimhc experiment --config examples/experiment_example.yaml
+optimhc experiment --config experiment_example.yaml
 ```
 
 !!! tip

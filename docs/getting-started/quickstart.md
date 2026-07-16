@@ -56,20 +56,33 @@ optimhc pipeline \
 
 ## 3. Inspect the Output
 
-After a successful run, the output directory will contain:
+After a successful run with the default output settings, the principal output files include:
 
 ```
 results/
-├── my_first_run.mokapot.psms.txt       # Rescored PSMs with q-values
-├── my_first_run.mokapot.peptides.txt   # Peptide-level results
-├── my_first_run.pin                     # PIN file with all features
-├── models/                              # Saved rescoring model(s)
-└── figures/
-    ├── qvalues.png                      # Q-value curves
-    ├── feature_importance.png           # Feature importance bar chart
-    ├── feature_correlation.png          # Feature correlation heatmap
-    └── target_decoy_histogram.png       # Target vs decoy distributions
+└── my_first_run/
+    ├── optimhc.mokapot.psms.txt         # Rescored PSMs with q-values
+    ├── optimhc.mokapot.peptides.txt     # Peptide-level results
+    ├── optimhc.pin                      # PIN file with all features
+    ├── optimhc.FlashLFQ.txt             # FlashLFQ export (toFlashLFQ: true)
+    ├── models/                          # Saved rescoring model(s)
+    └── figures/
+        ├── qvalues.png                  # Q-value curves
+        ├── feature_importance.png       # Feature importance bar chart
+        ├── feature_correlation.png      # Feature correlation heatmap
+        └── target_decoy_histogram.png   # Target vs decoy distributions
 ```
+
+If a binding-affinity generator such as NetMHCpan, NetMHCIIpan, or MHCflurry yields an exportable best-prediction summary, the default `keepIntermediate: true` setting also produces:
+
+```text
+results/
+└── my_first_run/
+    └── intermediate/
+        └── BA.parquet                    # Best binding prediction per peptide and predictor
+```
+
+See [Binding Affinity Score](../tutorial/features/binding-affinity.md#binding-affinity-intermediate) for the schema and generation method.
 
 ## What's Next?
 
