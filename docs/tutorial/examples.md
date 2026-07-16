@@ -28,7 +28,7 @@ keepIntermediate: True
 - `decoyPrefix` — the prefix used by the search engine to mark decoy protein accessions (default: `DECOY_`).
 - `outputDir` — where results, models, and figures are written.
 - `numProcesses` — number of parallel processes for feature generation.
-- `keepIntermediate` — write supported intermediate artifacts such as the best-prediction `BA.parquet` summary (default: `True`).
+- `keepIntermediate` — write supported intermediate results such as the best-prediction `BA.parquet` summary (default: `True`).
 
 ### Modification Mapping
 

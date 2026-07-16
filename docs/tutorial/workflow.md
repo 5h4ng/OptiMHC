@@ -126,7 +126,7 @@ Rescoring uses the [mokapot](https://mokapot.readthedocs.io/) framework. The pip
 - **PIN file** — the complete feature matrix in Percolator input format (useful for downstream tools).
 - **Models** — serialized rescoring models (when `saveModels: true`).
 - **FlashLFQ file** — quantification-ready output (when `toFlashLFQ: true`).
-- **BA Parquet summary** — best binding prediction per peptide and predictor, documented under [Binding-Affinity Intermediate](features/binding-affinity.md#binding-affinity-intermediate).
+- **BA Parquet intermediate results** — best binding prediction per peptide and predictor, documented under [Binding-Affinity Intermediate Results](features/binding-affinity.md#binding-affinity-intermediate-results).
 
 ### Visualizations
 

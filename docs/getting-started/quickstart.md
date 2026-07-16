@@ -78,11 +78,11 @@ If a binding-affinity generator such as NetMHCpan, NetMHCIIpan, or MHCflurry yie
 ```text
 results/
 └── my_first_run/
-    └── intermediate/
+    └── intermediate_results/
         └── BA.parquet                    # Best binding prediction per peptide and predictor
 ```
 
-See [Binding Affinity Score](../tutorial/features/binding-affinity.md#binding-affinity-intermediate) for the schema and generation method.
+See [Binding Affinity Score](../tutorial/features/binding-affinity.md#binding-affinity-intermediate-results) for the schema and generation method.
 
 ## What's Next?
 

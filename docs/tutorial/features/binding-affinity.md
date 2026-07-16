@@ -20,12 +20,12 @@ Use standard HLA names for NetMHCpan, NetMHCIIpan, and MHCflurry. Examples:
 
 NetMHCpan, NetMHCIIpan, and MHCflurry validate supported alleles through their own model packages or executables. PWM support is limited to alleles with matrices in `optimhc/PWMs/`; OptiMHC maps standard config names to PWM directory names internally. See [PWM Score](pwm.md#allele-support-and-format).
 
-## Binding-Affinity Intermediate
+## Binding-Affinity Intermediate Results
 
 When `keepIntermediate` is `true` (the default), OptiMHC writes the available binding-affinity predictions to:
 
 ```text
-<outputDir>/<experimentName>/intermediate/BA.parquet
+<outputDir>/<experimentName>/intermediate_results/BA.parquet
 ```
 
 The table is created from the configured binding-affinity predictors. It contains one row per preprocessed peptide and the best prediction from each predictor. NetMHCpan and NetMHCIIpan select the allele with the lowest percentile rank; MHCflurry uses its best-allele result. The Parquet index is `peptide`.
