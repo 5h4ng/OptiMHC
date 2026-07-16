@@ -1,4 +1,5 @@
 import logging
+import os
 from multiprocessing import Pool, cpu_count
 from typing import List, Optional
 
@@ -22,6 +23,15 @@ _worker_predictor: Optional[NetMHCpan41_BA] = None
 
 def _init_worker(alleles: List[str], program_name: str) -> None:
     global _worker_predictor
+    # mhctools reuses program_name as a temporary-file prefix, so it must not
+    # contain directory separators.
+    #
+    # Keep the executable discoverable by adding its directory to this process's
+    # PATH, then pass only the basename to mhctools.
+    exe_dir = os.path.dirname(program_name)
+    if exe_dir:
+        os.environ["PATH"] = exe_dir + os.pathsep + os.environ.get("PATH", "")
+        program_name = os.path.basename(program_name)
     _worker_predictor = NetMHCpan41_BA(alleles=alleles, program_name=program_name)
 
 
@@ -83,6 +93,17 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
         self.n_processes = min(n_processes, cpu_count())
         self.show_progress = show_progress
         self.executable_path = executable_path
+
+        # mhctools reuses program_name as a temporary-file prefix, so it must not
+        # contain directory separators.
+        #
+        # Keep the executable discoverable by adding its directory to this process's
+        # PATH, then pass only the basename to mhctools.
+        exe_dir = os.path.dirname(executable_path)
+        if exe_dir:
+            os.environ["PATH"] = exe_dir + os.pathsep + os.environ.get("PATH", "")
+            executable_path = os.path.basename(executable_path)
+
         # Only create a predictor when running single-process; multiprocessing uses
         # _init_worker to create one per worker process instead.
         self.predictor = (

@@ -22,7 +22,11 @@ _worker_predictor: Optional[NetMHCIIpan43_BA] = None
 
 def _init_worker(alleles: List[str], program_name: str) -> None:
     global _worker_predictor
-    # mhctools uses program_name as a tempfile prefix — pass basename, add dir to PATH.
+    # mhctools reuses program_name as a temporary-file prefix, so it must not
+    # contain directory separators.
+    #
+    # Keep the executable discoverable by adding its directory to this process's
+    # PATH, then pass only the basename to mhctools.
     exe_dir = os.path.dirname(program_name)
     if exe_dir:
         os.environ["PATH"] = exe_dir + os.pathsep + os.environ.get("PATH", "")
@@ -89,7 +93,11 @@ class NetMHCIIpanFeatureGenerator(BaseFeatureGenerator):
         self.show_progress = show_progress
         self.executable_path = executable_path
 
-        # mhctools uses program_name as a tempfile prefix — pass basename, add dir to PATH.
+        # mhctools reuses program_name as a temporary-file prefix, so it must not
+        # contain directory separators.
+        #
+        # Keep the executable discoverable by adding its directory to this process's
+        # PATH, then pass only the basename to mhctools.
         exe_dir = os.path.dirname(executable_path)
         if exe_dir:
             os.environ["PATH"] = exe_dir + os.pathsep + os.environ.get("PATH", "")
