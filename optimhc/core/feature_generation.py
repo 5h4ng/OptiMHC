@@ -6,6 +6,8 @@ from optimhc.feature.factory import feature_generator_factory
 
 logger = logging.getLogger(__name__)
 
+_BINDING_GENERATORS = frozenset({"NetMHCpan", "NetMHCIIpan", "MHCflurry"})
+
 
 def generate_features(psms, config):
     """
@@ -21,13 +23,14 @@ def generate_features(psms, config):
     Returns
     -------
     dict
-        Dict of raw predictions from binding generators, keyed by generator name.
-        Only includes generators that have ``_raw_predictions`` set.
+        Raw predictions from configured binding generators, keyed by generator name.
+        Empty when ``keepIntermediate`` is disabled.
     """
     feature_generators = config.get("featureGenerator", None)
     if not feature_generators:
         return {}
 
+    keep_intermediate = config.get("keepIntermediate", True)
     raw_predictions = {}
 
     for generator_config in feature_generators:
@@ -43,9 +46,10 @@ def generate_features(psms, config):
         generator = generator_cls.from_config(psms, config, params)
         generator.apply(psms, source=name)
 
-        # Capture raw predictions from binding predictors before GC
-        if hasattr(generator, "_raw_predictions") and generator._raw_predictions is not None:
-            raw_predictions[name] = generator._raw_predictions.copy()
+        if keep_intermediate and name in _BINDING_GENERATORS:
+            predictions = generator.raw_predictions
+            if predictions is not None:
+                raw_predictions[name] = predictions.copy()
 
         del generator
         gc.collect()
