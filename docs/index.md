@@ -1,24 +1,16 @@
+
+
 # OptiMHC
+
+<div align="center">
+  <a href="https://github.com/5h4ng/OptiMHC">
+    <img src="assets/optimhc_logo.svg" alt="OptiMHC logo" width="520">
+  </a>
+</div>
 
 **An optimized rescoring pipeline for immunopeptidomics data that significantly enhances peptide identification performance.**
 
-OptiMHC integrates multiple rescoring features with machine learning-based rescoring to maximize the number of confidently identified peptides from mass spectrometry experiments.
-
-## How It Works
-
-```
-Input files (PepXML / PIN)
-  → Parsing & feature extraction
-    → PsmContainer (central data structure)
-      → Feature generation (Basic, Spectral, RT, MHC binding, PWM, Overlap, …)
-        → Machine learning rescoring (Percolator / XGBoost / RandomForest)
-          → Visualization & output
-```
-
-1. **Parse** search engine results from PepXML or PIN format into a unified `PsmContainer`.
-2. **Generate features** using a configurable set of features — each adds new scoring dimensions to the PSM data.
-3. **Rescore** PSMs with machine learning models (Percolator SVM, XGBoost, or RandomForest) trained via mokapot to separate targets from decoys at a controlled FDR.
-4. **Visualize** results with q-value curves, feature importance plots, and target/decoy distributions.
+OptiMHC integrates multiple features with machine learning-based rescoring to maximize the number of confidently identified peptides from mass spectrometry experiments.
 
 ## Getting Started
 

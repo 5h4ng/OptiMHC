@@ -1,6 +1,6 @@
 # Overlapping Peptide Score
 
-The **OverlappingPeptide** feature (`name: OverlappingPeptide`) is designed for detecting **ladder-like presentation hotspots** — genomic regions where the MHC presentation machinery repeatedly samples overlapping peptides, producing a characteristic nested/ladder pattern in the immunopeptidome.
+The **OverlappingPeptide** feature (`name: OverlappingPeptide`) is designed for detecting **ladder-like peptide hotspots** — regions where related peptides form a characteristic nested/ladder pattern in the immunopeptidome.
 
 The method is inspired by the **Overlap-Layout-Consensus (OLC)** algorithm from genome assembly. We adapt the first two stages — overlap detection and layout (contig construction) — to build an overlap graph of peptide sequences and assemble them into contigs. 
 

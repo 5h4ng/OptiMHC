@@ -24,11 +24,10 @@ class BasicFeatureGenerator(BaseFeatureGenerator):
     peptides : List[str]
         List of peptide sequences to generate features for.
     remove_pre_nxt_aa : bool, optional
-        Whether to remove the amino acids adjacent to the peptide.
-        If True, removes them. Default is True.
+        Whether to remove flanking previous/next amino acids from peptide sequences.
+        Default is True.
     remove_modification : bool, optional
-        Whether to remove modifications in the peptide sequences.
-        If True, removes them. Default is True.
+        Whether to remove peptide modification annotations. Default is True.
 
     Notes
     -----

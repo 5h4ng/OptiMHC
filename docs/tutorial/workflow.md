@@ -31,6 +31,7 @@ decoyPrefix: DECOY_
 visualization: true
 saveModels: true
 toFlashLFQ: true
+keepIntermediate: true
 numProcesses: 4
 logLevel: INFO
 rescore:
@@ -87,16 +88,16 @@ After all generators have run, the PsmContainer holds the complete feature matri
 
 Available generators are documented in detail in the [Features](features/index.md) section:
 
-| Feature | Source Name | Join Key |
-|---|---|---|
-| Basic | `Basic` | index |
+| Feature            | Source Name          | Join Key                    |
+| ------------------ | -------------------- | --------------------------- |
+| Basic              | `Basic`              | index                       |
 | SpectralSimilarity | `SpectralSimilarity` | spectrum + peptide + charge |
-| DeepLC | `DeepLC` | index |
-| OverlappingPeptide | `OverlappingPeptide` | peptide |
-| PWM | `PWM` | peptide |
-| MHCflurry | `MHCflurry` | peptide |
-| NetMHCpan | `NetMHCpan` | peptide |
-| NetMHCIIpan | `NetMHCIIpan` | peptide |
+| DeepLC             | `DeepLC`             | index                       |
+| OverlappingPeptide | `OverlappingPeptide` | peptide                     |
+| PWM                | `PWM`                | peptide                     |
+| MHCflurry          | `MHCflurry`          | peptide                     |
+| NetMHCpan          | `NetMHCpan`          | peptide                     |
+| NetMHCIIpan        | `NetMHCIIpan`        | peptide                     |
 
 ## Stage 4: Rescoring
 
@@ -104,17 +105,17 @@ Rescoring uses the [mokapot](https://mokapot.readthedocs.io/) framework. The pip
 
 1. **Builds a mokapot dataset** — converts the PsmContainer into a `LinearPsmDataset` with the selected rescoring features, target/decoy labels, spectrum IDs, and peptide sequences.
 2. **Trains a model** — `mokapot.brew()` performs semi-supervised learning with 3-fold cross-validation:
-    - Trains the model on the training fold.
-    - Scores PSMs in the test fold.
-    - Repeats for all folds.
+   - Trains the model on the training fold.
+   - Scores PSMs in the test fold.
+   - Repeats for all folds.
 3. **Assigns q-values** using target-decoy competition at the specified `testFDR`.
 
 ### Available Models
 
-| Model | Description |
-|---|---|
-| **Percolator** | Linear SVM (default). Fast and robust. Uses `mokapot.PercolatorModel`. |
-| **XGBoost** | Gradient-boosted trees. Hyperparameters tuned via `GridSearchCV` (3-fold CV, ROC-AUC). Searches over `scale_pos_weight`, `max_depth`, `min_child_weight`, `gamma`. |
+| Model            | Description                                                                                                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Percolator**   | Linear SVM (default). Fast and robust. Uses `mokapot.PercolatorModel`.                                                                                                            |
+| **XGBoost**      | Gradient-boosted trees. Hyperparameters tuned via `GridSearchCV` (3-fold CV, ROC-AUC). Searches over `scale_pos_weight`, `max_depth`, `min_child_weight`, `gamma`.                |
 | **RandomForest** | Random forest classifier. Hyperparameters tuned via `GridSearchCV` (3-fold CV, ROC-AUC). Searches over `class_weight`, `max_depth`, `min_samples_split`, `min_impurity_decrease`. |
 
 ## Stage 5: Output & Visualization
@@ -125,16 +126,17 @@ Rescoring uses the [mokapot](https://mokapot.readthedocs.io/) framework. The pip
 - **PIN file** — the complete feature matrix in Percolator input format (useful for downstream tools).
 - **Models** — serialized rescoring models (when `saveModels: true`).
 - **FlashLFQ file** — quantification-ready output (when `toFlashLFQ: true`).
+- **BA Parquet intermediate results** — best binding prediction per peptide and predictor, documented under [Binding-Affinity Intermediate Results](features/binding-affinity.md#binding-affinity-intermediate-results).
 
 ### Visualizations
 
 When `visualization: true`, the pipeline produces:
 
-| Plot | Description |
-|---|---|
-| **qvalues.png** | Number of PSMs and peptides accepted at each q-value threshold. |
-| **feature_importance.png** | Bar chart showing the weight or importance of each feature in the trained model. |
-| **feature_correlation.png** | Heatmap of pairwise Pearson correlations among all rescoring features. |
+| Plot                           | Description                                                                                              |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| **qvalues.png**                | Number of PSMs and peptides accepted at each q-value threshold.                                          |
+| **feature_importance.png**     | Bar chart showing the weight or importance of each feature in the trained model.                         |
+| **feature_correlation.png**    | Heatmap of pairwise Pearson correlations among all rescoring features.                                   |
 | **target_decoy_histogram.png** | KDE histograms comparing the distribution of each feature for targets vs. decoys (top-ranked hits only). |
 
 ## Experiment Mode

@@ -6,7 +6,7 @@ Original features are the initial set of scores and derived quantities extracted
 
 When parsing PepXML files, OptiMHC extracts raw search engine scores and computes several derived features.
 
-### Search Engine Scores
+### Search Engine Score
 
 All `<search_score>` elements from the PepXML file are extracted as features. The exact columns depend on the search engine that produced the file. For example, Comet produces:
 

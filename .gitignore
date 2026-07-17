@@ -212,11 +212,7 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-data/*.mzML
-data/*.pep.xml
-data/compressed/*mzML.gz
-
-# Ignore example results directory to avoid large files
-examples/results/
-
+data/*
+examples/*
+playground/*
 .DS_Store

@@ -10,6 +10,27 @@ The PWM matrices used in OptiMHC are derived from the [SysteMHC Atlas](https://s
 >
 > Huang, X.; Gan, Z. *et al.* The SysteMHC Atlas v2.0, an updated resource for mass spectrometry-based immunopeptidomics. *Nucleic Acids Res* (2024). [doi:10.1093/nar/gkad1068](https://doi.org/10.1093/nar/gkad1068)
 
+## Allele Support and Format
+
+PWM scoring only works for alleles that have local PWM matrix files under `optimhc/PWMs/`.
+
+Use standard HLA names in the top-level `allele` config. OptiMHC maps them to the local PWM directory names internally:
+
+| MHC class | Config allele format | PWM directory format | Examples available in OptiMHC |
+|---|---|---|---|
+| Class I | `HLA-A*02:02` | `HLA-A02_02` | `HLA-A*02:02`, `HLA-B*07:02` |
+| Class II DP/DQ | `HLA-DPA1*02:01-DPB1*01:01` | `HLA-DPA10201-DPB10101` | `HLA-DPA1*02:01-DPB1*01:01`, `HLA-DQA1*05:01-DQB1*02:01` |
+| Class II DR | `DRB1_0101` | `DRB1_0101` | `DRB1_0101` |
+
+To check all available PWM alleles, list the matrix directories:
+
+```bash
+ls optimhc/PWMs/I
+ls optimhc/PWMs/II
+```
+
+If a requested allele has no matching PWM directory, the PWM feature generator will fail during matrix loading. NetMHCpan, NetMHCIIpan, and MHCflurry have their own supported allele lists and may support alleles that are not available for PWM scoring.
+
 ## Output Columns
 
 The number and names of output columns depend on the MHC class and alleles.
