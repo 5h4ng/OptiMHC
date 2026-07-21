@@ -1,7 +1,7 @@
 # Original Features
 
 Original features are the initial scores and derived quantities declared by an input reader.
-They are ordinary canonical DataFrame columns listed in `psms.feature_columns`. Experiment mode
+They are ordinary PSM DataFrame columns listed in `psms.feature_columns`. Experiment mode
 exposes them as the `Original` entry in its run-local feature manifest; the PsmContainer itself
 does not maintain a source registry. The exact columns depend on the input format.
 
@@ -97,7 +97,7 @@ The following columns are extracted but treated as metadata (not used as rescori
 - `rank` — candidate rank (also declared as a rescoring feature)
 - `is_decoy` — Boolean target/decoy state
 - `calc_mass` — calculated neutral mass
-- `sequence`, `mods`, `mod_sites` — canonical peptidoform fields
+- `sequence`, `mods`, `mod_sites` — normalized peptidoform fields
 - `proteins` — protein accessions
 - `charge` — precursor charge (kept as metadata; one-hot columns are the features)
 - `retention_time` — retention time in seconds

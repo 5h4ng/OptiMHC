@@ -16,7 +16,7 @@ def read_pin(
     pin_file: str | Path,
     retention_time_column: str | None = None,
 ) -> PsmContainer:
-    """Read one PIN file into the canonical PSM table."""
+    """Read one PIN file into the OptiMHC PSM DataFrame."""
     path = Path(pin_file)
     pin = _read_single_pin_as_df(path)
     columns = {column.lower(): column for column in pin.columns}
@@ -76,7 +76,7 @@ def read_pin(
     if rank is None or rank not in feature_columns:
         feature_columns = (*feature_columns, "rank")
 
-    canonical = pd.DataFrame(
+    psm_df = pd.DataFrame(
         {
             "psm_id": range(len(pin)),
             "run": run_values,
@@ -94,17 +94,17 @@ def read_pin(
         retention_time = pd.to_numeric(pin[rt], errors="raise")
         if rt.lower() == "retentiontime":
             retention_time = retention_time * 60
-        canonical["retention_time"] = retention_time
+        psm_df["retention_time"] = retention_time
     if exp_mass is not None:
-        canonical["exp_mass"] = pd.to_numeric(pin[exp_mass], errors="raise")
+        psm_df["exp_mass"] = pd.to_numeric(pin[exp_mass], errors="raise")
     if calc_mass is not None:
-        canonical["calc_mass"] = pd.to_numeric(pin[calc_mass], errors="raise")
+        psm_df["calc_mass"] = pd.to_numeric(pin[calc_mass], errors="raise")
     for column in feature_columns:
         if column == "rank":
             continue
-        canonical[column] = pd.to_numeric(pin[column], errors="raise").to_numpy()
+        psm_df[column] = pd.to_numeric(pin[column], errors="raise").to_numpy()
 
-    return PsmContainer(canonical, feature_columns=feature_columns)
+    return PsmContainer(psm_df, feature_columns=feature_columns)
 
 
 def _read_single_pin_as_df(pin_file: str | Path) -> pd.DataFrame:
@@ -114,7 +114,9 @@ def _read_single_pin_as_df(pin_file: str | Path) -> pd.DataFrame:
         for line in handle:
             values = line.rstrip("\n").split("\t")
             protein_count = len(values) - len(header) + 1
-            rows.append(values[: len(values) - protein_count] + ["\t".join(values[-protein_count:])])
+            rows.append(
+                values[: len(values) - protein_count] + ["\t".join(values[-protein_count:])]
+            )
     return pd.DataFrame(rows, columns=header)
 
 
@@ -209,9 +211,7 @@ def _parse_pin_peptide(value: object) -> tuple[str, str, str]:
             annotation = peptide[index + 1 : end]
             unimod = re.fullmatch(r"UNIMOD:(\d+)", annotation, re.IGNORECASE)
             if unimod:
-                mod_name = modification_from_unimod(
-                    int(unimod.group(1)), residue=sequence[-1]
-                )
+                mod_name = modification_from_unimod(int(unimod.group(1)), residue=sequence[-1])
                 mod_site = len(sequence)
             else:
                 try:

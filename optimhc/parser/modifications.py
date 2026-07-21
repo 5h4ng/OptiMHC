@@ -42,7 +42,7 @@ def modification_from_unimod(
     residue: str | None = None,
     site: int | None = None,
 ) -> str:
-    """Resolve a Unimod accession to the canonical AlphaBase name at one site."""
+    """Resolve a Unimod accession to the normalized AlphaBase name at one site."""
     table = modification_table()
     candidates = table.loc[table["unimod_id"].eq(unimod_id)].copy()
     candidates = _at_location(candidates, residue=residue, site=site)
@@ -59,7 +59,7 @@ def _at_location(
     residue: str | None,
     site: int | None,
 ) -> pd.DataFrame:
-    """Restrict modification definitions to the canonical residue or terminus."""
+    """Restrict modification definitions to the supported residue or terminus."""
 
     if site == 0:
         candidates = candidates[candidates["mod_name"].str.contains("N-term", regex=False)]

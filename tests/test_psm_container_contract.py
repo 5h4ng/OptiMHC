@@ -4,7 +4,7 @@ import pytest
 from optimhc.psm_container import PsmContainer
 
 
-def test_container_exposes_the_canonical_dataframe_and_features():
+def test_container_exposes_the_psm_dataframe_and_features():
     candidates = pd.DataFrame(
         {
             "psm_id": [0, 1],

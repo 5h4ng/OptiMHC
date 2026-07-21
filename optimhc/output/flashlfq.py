@@ -1,4 +1,4 @@
-"""FlashLFQ output adapter for canonical PSMs and Mokapot results."""
+"""FlashLFQ output adapter for OptiMHC PSMs and Mokapot results."""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def format_flashlfq(
 ) -> pd.DataFrame:
     """Map one Mokapot peptide-confidence table to FlashLFQ columns."""
     if "retention_time" not in psms.df:
-        raise ValueError("FlashLFQ export requires canonical column 'retention_time'.")
+        raise ValueError("FlashLFQ export requires PSM column 'retention_time'.")
 
     required_results = {"SpecId", "Peptide", "mokapot q-value"}
     missing_results = sorted(required_results.difference(peptide_results.columns))
@@ -76,9 +76,9 @@ def format_flashlfq(
             "File Name": frame["run"].map(lambda value: Path(str(value)).name),
             "Base Sequence": frame["sequence"].astype(str),
             "Peptide Monoisotopic Mass": _calculated_masses(frame),
-            "Scan Retention Time": pd.to_numeric(
-                frame["retention_time"], errors="raise"
-            ).astype(float)
+            "Scan Retention Time": pd.to_numeric(frame["retention_time"], errors="raise").astype(
+                float
+            )
             / 60,
             "Precursor Charge": frame["charge"].astype(int),
             "Protein Accession": frame["proteins"].astype(str),
@@ -101,7 +101,7 @@ def format_flashlfq(
     )
     if not joined["_merge"].eq("both").all():
         missing = joined.loc[joined["_merge"].ne("both"), keys].to_dict("records")
-        raise ValueError(f"FlashLFQ could not map accepted peptides to canonical PSMs: {missing}")
+        raise ValueError(f"FlashLFQ could not map accepted peptides to OptiMHC PSMs: {missing}")
 
     joined["Full Sequence"] = joined["Peptide"]
     return joined.loc[:, FLASHLFQ_COLUMNS]
@@ -129,9 +129,7 @@ def _calculated_masses(frame: pd.DataFrame) -> pd.Series:
     if missing.any():
         calculated.loc[missing] = [
             _peptide_mass(sequence, mods)
-            for sequence, mods in zip(
-                frame.loc[missing, "sequence"], frame.loc[missing, "mods"]
-            )
+            for sequence, mods in zip(frame.loc[missing, "sequence"], frame.loc[missing, "mods"])
         ]
     return calculated
 

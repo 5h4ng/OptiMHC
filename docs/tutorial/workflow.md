@@ -66,14 +66,14 @@ The PIN parser reads one tab-separated Percolator input file per call. Columns t
 
 ### PsmContainer
 
-Regardless of input format, parsing produces a `PsmContainer`: a small wrapper around one canonical pandas DataFrame plus an immutable tuple of feature column names.
+Regardless of input format, parsing produces a `PsmContainer`: a small wrapper around one normalized PSM DataFrame plus an immutable tuple of feature column names.
 
 ```python
 psms.df[["run", "scan", "rank", "sequence", "charge"]]
 psms.feature_columns
 ```
 
-The canonical identity of a physical spectrum is `run` plus `scan`; `rank` identifies competing candidates and is always a declared model feature. Multi-file combination is handled by the pipeline in the configured file order.
+The identity of a physical spectrum is `run` plus `scan`; `rank` identifies competing candidates and is always a declared model feature. Multi-file combination is handled by the pipeline in the configured file order.
 
 ## Stage 3: Feature Generation
 
@@ -81,7 +81,7 @@ The pipeline iterates over the `featureGenerator` list from the configuration. F
 
 1. Instantiates the feature class by name.
 2. Calls `generate_features()`, which returns a DataFrame.
-3. Attaches explicitly named numeric columns with `add_features(..., on=..., columns=...)` using a canonical key such as `psm_id`, `run` plus `scan`, or `sequence`.
+3. Attaches explicitly named numeric columns with `add_features(..., on=..., columns=...)` using a PSM key such as `psm_id`, `run` plus `scan`, or `sequence`.
 
 After all generators have run, the PsmContainer holds the complete feature matrix. The
 orchestration layer also records a run-local manifest mapping `Original` and each generator
@@ -90,7 +90,7 @@ PsmContainer.
 
 Available generators are documented in detail in the [Features](features/index.md) section:
 
-| Feature            | Typical canonical join key |
+| Feature            | Typical PSM join key |
 | ------------------ | -------------------------- |
 | Basic              | `psm_id`                   |
 | SpectralSimilarity | `psm_id`                   |
@@ -129,7 +129,7 @@ Rescoring uses the [mokapot](https://mokapot.readthedocs.io/) framework. The pip
 - **Models** — serialized rescoring models (when `saveModels: true`).
 - **FlashLFQ file** — accepted peptides in quantification-ready format (when
   `toFlashLFQ: true`). Retention time is written in minutes; missing calculated masses are
-  derived from the canonical peptidoform.
+  derived from the normalized peptidoform.
 - **BA Parquet intermediate results** — best binding prediction per peptide and predictor, documented under [Binding-Affinity Intermediate Results](features/binding-affinity.md#binding-affinity-intermediate-results).
 
 ### Visualizations

@@ -1,4 +1,4 @@
-"""Mokapot boundary for canonical PSM candidates."""
+"""Mokapot boundary for OptiMHC PSM candidates."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def to_mokapot_dataframe(
     psms: PsmContainer,
     feature_columns: Sequence[str] | None = None,
 ) -> pd.DataFrame:
-    """Project canonical candidates into one PIN-compatible DataFrame."""
+    """Project PSM candidates into one PIN-compatible DataFrame."""
     selected = _selected_feature_columns(psms, feature_columns)
     unknown = [column for column in selected if column not in psms.feature_columns]
     if unknown:
@@ -75,8 +75,7 @@ def mokapot_feature_columns(
 
 def _has_charge_feature(columns: Sequence[str]) -> bool:
     return any(
-        column == "Charge"
-        or re.fullmatch(r"charge_?\d+(?:_or_more)?", column, re.IGNORECASE)
+        column == "Charge" or re.fullmatch(r"charge_?\d+(?:_or_more)?", column, re.IGNORECASE)
         for column in columns
     )
 
@@ -105,7 +104,9 @@ def convert_to_mokapot_dataset(
     rescoring_features: Sequence[str] | None = None,
 ):
     """Load the shared projection through Mokapot's PIN reader."""
-    selected = tuple(rescoring_features) if rescoring_features is not None else psms.feature_columns
+    selected = (
+        tuple(rescoring_features) if rescoring_features is not None else psms.feature_columns
+    )
     projected = to_mokapot_dataframe(psms, feature_columns=selected)
     dataset = mokapot_lib.read_pin(
         projected,
@@ -124,7 +125,7 @@ def rescore(
     rng: int = 1,
     **kwargs,
 ):
-    """Rescore canonical candidates deterministically with Mokapot."""
+    """Rescore PSM candidates deterministically with Mokapot."""
     dataset = convert_to_mokapot_dataset(psms, rescoring_features=rescoring_features)
     logger.info("Rescoring PSMs with mokapot.")
     return mokapot_lib.brew(

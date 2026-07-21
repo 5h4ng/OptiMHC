@@ -75,13 +75,11 @@ class BaseFeatureGenerator(ABC):
         """
         features = self.generate_features()
         keys = list(self.id_column)
-        canonical_keys = ["sequence" if key == "Peptide" else key for key in keys]
-        features = features.rename(columns=dict(zip(keys, canonical_keys)))
-        features = features.drop_duplicates(
-            subset=[*canonical_keys, *self.feature_columns]
-        )
+        join_keys = ["sequence" if key == "Peptide" else key for key in keys]
+        features = features.rename(columns=dict(zip(keys, join_keys)))
+        features = features.drop_duplicates(subset=[*join_keys, *self.feature_columns])
         psms.add_features(
             features,
-            on=canonical_keys,
+            on=join_keys,
             columns=self.feature_columns,
         )

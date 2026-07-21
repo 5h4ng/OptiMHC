@@ -21,7 +21,7 @@ The **SpectralSimilarity** feature (`name: SpectralSimilarity`) compares experim
 
 ### Step 1: Spectrum Extraction
 
-Experimental MS2 spectra are extracted from mzML files. Canonical `run` resolves to `<mzmlDir>/<run>.mzML`, and `scan` selects the spectrum. The m/z and intensity arrays are sorted by m/z.
+Experimental MS2 spectra are extracted from mzML files. Each PSM `run` resolves to `<mzmlDir>/<run>.mzML`, and `scan` selects the spectrum. The m/z and intensity arrays are sorted by m/z.
 
 ### Step 2: Theoretical Spectrum Prediction
 

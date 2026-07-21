@@ -9,7 +9,7 @@ from optimhc.rescore.mokapot import write_pin
 FIXTURES = Path(__file__).parent
 
 
-def test_pin_reader_returns_canonical_candidates():
+def test_pin_reader_returns_normalized_candidates():
     candidates = read_pin(FIXTURES / "fragpipe_sample.pin")
 
     assert candidates.df["psm_id"].tolist() == [0, 1, 2, 3]
@@ -74,9 +74,7 @@ def test_pipeline_aligns_observed_charge_features_across_pepxml_runs(tmp_path):
     second = tmp_path / "run_b.pep.xml"
     first.write_text(fixture)
     second.write_text(
-        fixture.replace("run_a", "run_b").replace(
-            'assumed_charge="2"', 'assumed_charge="3"'
-        )
+        fixture.replace("run_a", "run_b").replace('assumed_charge="2"', 'assumed_charge="3"')
     )
     pipeline = Pipeline(
         {

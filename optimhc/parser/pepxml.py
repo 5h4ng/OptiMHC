@@ -1,4 +1,4 @@
-"""Semantic pepXML reader for canonical PSM candidates."""
+"""Semantic pepXML reader for the OptiMHC PSM DataFrame."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def read_pepxml(
 
     charge_features = pd.get_dummies(psms["charge"], prefix="charge", dtype=float)
     psms = pd.concat([psms, charge_features], axis=1)
-    canonical_columns = {
+    psm_columns = {
         "run",
         "scan",
         "rank",
@@ -56,7 +56,7 @@ def read_pepxml(
         "exp_mass",
         "calc_mass",
     }
-    feature_columns = tuple(column for column in psms.columns if column not in canonical_columns)
+    feature_columns = tuple(column for column in psms.columns if column not in psm_columns)
     for column in feature_columns:
         psms[column] = _log_feature(psms[column])
 

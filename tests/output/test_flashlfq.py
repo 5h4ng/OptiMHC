@@ -39,7 +39,7 @@ def _peptide_results():
     )
 
 
-def test_flashlfq_formats_accepted_peptides_from_canonical_psms():
+def test_flashlfq_formats_accepted_peptides_from_psm_dataframe():
     output = format_flashlfq(_candidates(), _peptide_results(), fdr=0.01)
 
     assert output.to_dict("records") == [
@@ -56,20 +56,14 @@ def test_flashlfq_formats_accepted_peptides_from_canonical_psms():
 
 
 def test_flashlfq_can_derive_missing_calculated_mass():
-    output = format_flashlfq(
-        _candidates(include_calc_mass=False), _peptide_results(), fdr=0.01
-    )
+    output = format_flashlfq(_candidates(include_calc_mass=False), _peptide_results(), fdr=0.01)
 
-    assert output["Peptide Monoisotopic Mass"].iat[0] == pytest.approx(
-        589.2418, abs=1e-3
-    )
+    assert output["Peptide Monoisotopic Mass"].iat[0] == pytest.approx(589.2418, abs=1e-3)
 
 
 def test_flashlfq_requires_retention_time():
     with pytest.raises(ValueError, match="retention_time"):
-        format_flashlfq(
-            _candidates(include_retention_time=False), _peptide_results(), fdr=0.01
-        )
+        format_flashlfq(_candidates(include_retention_time=False), _peptide_results(), fdr=0.01)
 
 
 def test_flashlfq_writer_accepts_mokapot_confidence_object(tmp_path):
@@ -83,9 +77,7 @@ def test_flashlfq_writer_accepts_mokapot_confidence_object(tmp_path):
 
 
 @pytest.mark.parametrize("enabled, expected_calls", [(True, 1), (False, 0)])
-def test_pipeline_honors_to_flashlfq_config(
-    tmp_path, monkeypatch, enabled, expected_calls
-):
+def test_pipeline_honors_to_flashlfq_config(tmp_path, monkeypatch, enabled, expected_calls):
     input_path = tmp_path / "input.pin"
     input_path.touch()
     pipeline = Pipeline(

@@ -1,4 +1,4 @@
-"""Canonical peptide-spectrum match table."""
+"""OptiMHC peptide-spectrum match table."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ REQUIRED_COLUMNS = (
 
 
 class PsmContainer:
-    """A small mutable wrapper around the canonical PSM DataFrame."""
+    """A small mutable wrapper around the OptiMHC PSM DataFrame."""
 
     def __init__(
         self,
@@ -80,7 +80,7 @@ class PsmContainer:
         on: str | Sequence[str],
         columns: Sequence[str],
     ) -> None:
-        """Attach explicitly declared numeric features using canonical keys."""
+        """Attach explicitly declared numeric features using PSM join keys."""
         keys = [on] if isinstance(on, str) else list(on)
         new_columns = list(columns)
 
@@ -100,8 +100,10 @@ class PsmContainer:
         if features.duplicated(keys).any():
             raise ValueError(f"Feature keys must be unique: {keys}")
 
-        key_coverage = self.df[keys].drop_duplicates().merge(
-            features[keys].drop_duplicates(), how="outer", on=keys, indicator=True
+        key_coverage = (
+            self.df[keys]
+            .drop_duplicates()
+            .merge(features[keys].drop_duplicates(), how="outer", on=keys, indicator=True)
         )
         if not key_coverage["_merge"].eq("both").all():
             raise ValueError("Feature keys must exactly cover the PSM keys.")

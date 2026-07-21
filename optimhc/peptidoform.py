@@ -1,4 +1,4 @@
-"""Consumer projections of canonical peptidoforms."""
+"""Consumer projections of normalized peptidoforms."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pyteomics.proforma import to_proforma as render_proforma
 
 
 def to_proforma(sequence: object, mods: object, mod_sites: object) -> str:
-    """Render canonical modification names as Unimod-accessioned ProForma."""
+    """Render normalized modification names as Unimod-accessioned ProForma."""
     sequence = str(sequence)
     residue_tags: dict[int, list[str]] = {}
     nterm: list[str] = []
