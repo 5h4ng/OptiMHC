@@ -270,6 +270,16 @@ class Pipeline:
             for i, model in enumerate(models):
                 model.save(os.path.join(model_dir, f"{file_root}.model{i}"))
 
+        if self.to_flashlfq:
+            from optimhc.output.flashlfq import write_flashlfq
+
+            write_flashlfq(
+                psms,
+                results,
+                os.path.join(output_dir, f"{file_root}.FlashLFQ.txt"),
+                fdr=self.test_fdr,
+            )
+
     def visualize_results(self, psms, results, models, output_dir=None):
         """
         Generate and save visualizations for the analysis results.
