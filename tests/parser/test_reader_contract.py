@@ -64,3 +64,32 @@ def test_pin_reader_rejects_labels_other_than_target_or_decoy(tmp_path):
 
     with pytest.raises(ValueError, match="-1 or 1"):
         read_pin(pin)
+
+
+def test_pipeline_aligns_observed_charge_features_across_pepxml_runs(tmp_path):
+    from optimhc.core.pipeline import Pipeline
+
+    fixture = (FIXTURES / "multi_rank_sample.pep.xml").read_text()
+    first = tmp_path / "run_a.pep.xml"
+    second = tmp_path / "run_b.pep.xml"
+    first.write_text(fixture)
+    second.write_text(
+        fixture.replace("run_a", "run_b").replace(
+            'assumed_charge="2"', 'assumed_charge="3"'
+        )
+    )
+    pipeline = Pipeline(
+        {
+            "inputType": "pepxml",
+            "inputFile": [str(first), str(second)],
+            "outputDir": str(tmp_path / "output"),
+            "visualization": False,
+            "saveModels": False,
+        }
+    )
+
+    candidates = pipeline.read_input()
+
+    assert {"charge_2", "charge_3"}.issubset(candidates.feature_columns)
+    assert candidates.df["charge_2"].tolist() == [1.0, 1.0, 0.0, 0.0]
+    assert candidates.df["charge_3"].tolist() == [0.0, 0.0, 1.0, 1.0]

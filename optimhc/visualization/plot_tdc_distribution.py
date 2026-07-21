@@ -33,16 +33,11 @@ def visualize_target_decoy_features(psms: PsmContainer, num_cols=5, save_path=No
     4. Separates target and decoy PSMs in each plot
     5. Uses kernel density estimation to show the distribution shape
     """
-    rescoring_features = [
-        item
-        for sublist in psms.rescoring_features.values()
-        for item in sublist
-        if item != psms.hit_rank_column
-    ]
+    rescoring_features = [feature for feature in psms.feature_columns if feature != "rank"]
 
     # drop features that only have one value
     rescoring_features = [
-        feature for feature in rescoring_features if len(psms.psms[feature].unique()) > 1
+        feature for feature in rescoring_features if psms.df[feature].nunique() > 1
     ]
 
     num_features = len(rescoring_features)
@@ -54,13 +49,13 @@ def visualize_target_decoy_features(psms: PsmContainer, num_cols=5, save_path=No
     fig, axes = plt.subplots(num_rows, num_cols, figsize=figsize, dpi=dpi)
     axes = axes.flatten()
 
-    psms_top_hits = psms.psms[psms.psms[psms.hit_rank_column] == 1].copy()
-    num_true_hits = len(psms_top_hits[psms_top_hits[psms.label_column]])
-    num_decoys = len(psms_top_hits[~psms_top_hits[psms.label_column]])
+    psms_top_hits = psms.df[psms.df["rank"] == 1].copy()
+    num_true_hits = len(psms_top_hits[~psms_top_hits["is_decoy"]])
+    num_decoys = len(psms_top_hits[psms_top_hits["is_decoy"]])
     logger.debug(f"Number of true hits: {num_true_hits}")
     logger.debug(f"Number of decoys: {num_decoys}")
-    psms_top_hits[psms.label_column] = psms_top_hits[psms.label_column].map(
-        {True: "Target", False: "Decoy"}
+    psms_top_hits["target_decoy"] = psms_top_hits["is_decoy"].map(
+        {False: "Target", True: "Decoy"}
     )
 
     for i, feature in enumerate(rescoring_features):
@@ -69,7 +64,7 @@ def visualize_target_decoy_features(psms: PsmContainer, num_cols=5, save_path=No
             sns.histplot(
                 data=psms_top_hits,
                 x=feature,
-                hue=psms.label_column,
+                hue="target_decoy",
                 ax=ax,
                 bins="auto",
                 common_bins=True,
