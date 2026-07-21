@@ -1,8 +1,10 @@
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from optimhc.parser import read_pepxml, read_pin
+from optimhc.rescore.mokapot import write_pin
 
 FIXTURES = Path(__file__).parent
 
@@ -40,6 +42,17 @@ def test_pepxml_reader_preserves_every_candidate_rank():
     assert candidates.df["proteins"].tolist() == ["P1", "DECOY_P1;DECOY_P2"]
     assert candidates.df["is_decoy"].tolist() == [False, True]
     assert {"hyperscore", "rank"}.issubset(candidates.feature_columns)
+
+
+def test_exported_proforma_pin_can_be_read_back(tmp_path):
+    candidates = read_pin(FIXTURES / "fragpipe_sample.pin")
+    output = tmp_path / "roundtrip.pin"
+
+    write_pin(candidates, output)
+    roundtrip = read_pin(output)
+
+    columns = ["sequence", "mods", "mod_sites"]
+    pd.testing.assert_frame_equal(roundtrip.df[columns], candidates.df[columns])
 
 
 def test_pin_reader_rejects_labels_other_than_target_or_decoy(tmp_path):

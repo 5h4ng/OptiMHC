@@ -1,4 +1,5 @@
-import optimhc.rescore.model  # noqa: F401 -- triggers model registration
+"""Rescoring interfaces; concrete models and engines load on demand."""
+
 from optimhc.rescore.factory import rescore_model_factory
 
 __all__ = ["rescore_model_factory"]

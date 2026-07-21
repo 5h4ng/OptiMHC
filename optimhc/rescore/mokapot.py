@@ -1,212 +1,136 @@
-# rescore/mokapot.py
-# A wrapper around mokapot for rescoring PSMs and converting to flashLFQ format
+"""Mokapot boundary for canonical PSM candidates."""
+
+from __future__ import annotations
 
 import logging
-import os
+import re
 from pathlib import Path
-from typing import List
+from typing import Sequence
 
-import mokapot
+import mokapot as mokapot_lib
+import numpy as np
 import pandas as pd
-from mokapot import LinearPsmDataset
 
+from optimhc.peptidoform import to_proforma
 from optimhc.psm_container import PsmContainer
 
 logger = logging.getLogger(__name__)
 
 
-def rescore(
+def mokapot_spec_id(run: object, scan: object, charge: object) -> str:
+    """Render the stable SpecId shared by Mokapot projections and output adapters."""
+    return f"{run}.{int(scan)}.{int(scan)}.{int(charge)}"
+
+
+def to_mokapot_dataframe(
     psms: PsmContainer,
-    model=None,
-    rescoring_features: List[str] = None,
-    test_fdr: float = 0.01,
-    **kwargs,
-):
-    """
-    Rescore PSMs using mokapot.
+    feature_columns: Sequence[str] | None = None,
+) -> pd.DataFrame:
+    """Project canonical candidates into one PIN-compatible DataFrame."""
+    selected = _selected_feature_columns(psms, feature_columns)
+    unknown = [column for column in selected if column not in psms.feature_columns]
+    if unknown:
+        raise ValueError(f"Unknown rescoring features: {unknown}")
 
-    Parameters
-    ----------
-    psms : PsmContainer
-        A PsmContainer object containing PSM data.
-    model : object, optional
-        An untrained mokapot-compatible model (e.g. PercolatorModel, XGBoostModel).
-        mokapot.brew trains it internally across cross-validation folds. If None, mokapot
-        uses its default PercolatorModel.
-    rescoring_features : List[str], optional
-        A list of feature names to use for rescoring.
-    test_fdr : float, optional
-        The FDR threshold used to evaluate and report results after training. Default is 0.01.
-    **kwargs : dict
-        Additional keyword arguments for mokapot.brew.
+    frame = psms.df
+    try:
+        numeric_features = frame.loc[:, selected].apply(pd.to_numeric, errors="raise")
+    except (TypeError, ValueError) as error:
+        raise ValueError("Rescoring features must contain only finite numeric values.") from error
+    if not np.isfinite(numeric_features.to_numpy(dtype=float)).all():
+        raise ValueError("Rescoring features must contain only finite numeric values.")
+    projected = pd.DataFrame(
+        {
+            "SpecId": [
+                mokapot_spec_id(run, scan, charge)
+                for run, scan, charge in zip(frame["run"], frame["scan"], frame["charge"])
+            ],
+            "Label": frame["is_decoy"].map({False: 1, True: -1}).astype(int),
+            "ScanNr": frame["scan"].astype(int),
+            "filename": frame["run"].astype(str),
+        }
+    )
+    if "calc_mass" in frame.columns:
+        projected["CalcMass"] = frame["calc_mass"].astype(float)
+    for column in selected:
+        projected[column] = numeric_features[column].to_numpy()
+    if not _has_charge_feature(selected):
+        projected["Charge"] = frame["charge"].astype(int)
+    projected["Peptide"] = [
+        to_proforma(sequence, mods, sites)
+        for sequence, mods, sites in zip(frame["sequence"], frame["mods"], frame["mod_sites"])
+    ]
+    projected["Proteins"] = frame["proteins"].astype(str)
+    return projected
 
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - Confidence object or list of Confidence objects:
-          An object or a list of objects containing the confidence estimates at various levels
-          (i.e. PSMs, peptides) when assessed using the learned score. If a list, they will be
-          in the same order as provided in the psms parameter.
-        - list of Model objects:
-          The trained Model objects, one for each cross-validation fold.
 
-    Notes
-    -----
-    This function:
-    1. Converts the PsmContainer to a mokapot LinearPsmDataset
-    2. Passes the dataset and untrained model to mokapot.brew, which trains across folds
-    3. Returns the per-fold confidence results and trained models
-    """
-    psms = convert_to_mokapot_dataset(psms, rescoring_features=rescoring_features)
-    logger.info("Rescoring PSMs with mokapot.")
-    results, models = mokapot.brew(psms, model=model, test_fdr=test_fdr, **kwargs)
-    return results, models
+def mokapot_feature_columns(
+    psms: PsmContainer,
+    feature_columns: Sequence[str] | None = None,
+) -> tuple[str, ...]:
+    """Return the effective features inferred from the shared PIN projection."""
+    selected = _selected_feature_columns(psms, feature_columns)
+    return selected if _has_charge_feature(selected) else (*selected, "Charge")
+
+
+def _has_charge_feature(columns: Sequence[str]) -> bool:
+    return any(
+        column == "Charge"
+        or re.fullmatch(r"charge_?\d+(?:_or_more)?", column, re.IGNORECASE)
+        for column in columns
+    )
+
+
+def _selected_feature_columns(
+    psms: PsmContainer,
+    feature_columns: Sequence[str] | None,
+) -> tuple[str, ...]:
+    selected = tuple(feature_columns) if feature_columns is not None else psms.feature_columns
+    return selected if "rank" in selected else (*selected, "rank")
+
+
+def write_pin(
+    psms: PsmContainer,
+    path: str | Path,
+    feature_columns: Sequence[str] | None = None,
+) -> pd.DataFrame:
+    """Write the shared Mokapot projection as a PIN file."""
+    projected = to_mokapot_dataframe(psms, feature_columns=feature_columns)
+    projected.to_csv(path, sep="\t", index=False)
+    return projected
 
 
 def convert_to_mokapot_dataset(
-    psms: PsmContainer, rescoring_features: List[str] = None
-) -> LinearPsmDataset:
-    """
-    Convert a PsmContainer to a LinearPsmDataset for use with mokapot.
-
-    Parameters
-    ----------
-    psms : PsmContainer
-        A PsmContainer object containing PSM data.
-    rescoring_features : List[str], optional
-        A list of feature names to use for rescoring.
-        If not provided, uses all features from the PsmContainer.
-
-    Returns
-    -------
-    LinearPsmDataset
-        A LinearPsmDataset object for use with mokapot.
-
-    Raises
-    ------
-    ValueError
-        If any of the specified rescoring features are not found in the PSM data.
-
-    Notes
-    -----
-    This function:
-    1. Extracts all features from the PsmContainer
-    2. Validates the specified rescoring features
-    3. Creates a LinearPsmDataset with the appropriate columns and data
-    """
-
-    # rescoring_features: Dict[str, List[str]] -> Tuple[str]
-    feature_columns = [col for features in psms.rescoring_features.values() for col in features]
-
-    if rescoring_features is None:
-        rescoring_features = feature_columns
-    else:
-        for feature in rescoring_features:
-            if feature not in feature_columns:
-                raise ValueError(f"Feature '{feature}' not found in the PSM data.")
-
-    dataset = LinearPsmDataset(
-        psms.psms,
-        target_column=psms.label_column,
-        spectrum_columns=psms.spectrum_column,
-        peptide_column=psms.peptide_column,
-        protein_column=psms.protein_column,
-        feature_columns=rescoring_features,
-        filename_column=psms.ms_data_file_column,
-        calcmass_column=psms.calculated_mass_column,
-        charge_column=psms.charge_column,
-        scan_column=psms.scan_column,
-        rt_column=psms.retention_time_column,
+    psms: PsmContainer,
+    rescoring_features: Sequence[str] | None = None,
+):
+    """Load the shared projection through Mokapot's PIN reader."""
+    selected = tuple(rescoring_features) if rescoring_features is not None else psms.feature_columns
+    projected = to_mokapot_dataframe(psms, feature_columns=selected)
+    dataset = mokapot_lib.read_pin(
+        projected,
+        filename_column="filename",
+        calcmass_column="CalcMass" if "CalcMass" in projected else None,
+        charge_column="Charge" if "Charge" in projected else None,
     )
-
     return dataset
 
 
-# Adapted from mokapot source code
-# https://github.com/wfondrie/mokapot
-
-
-def to_flashLFQ(results, output_dir, file_name):
-    logger.info("Saving results in FlashLFQ format.")
-    try:
-        assert not isinstance(results, str)
-        iter(results)
-    except TypeError:
-        results = [results]
-    except AssertionError:
-        raise ValueError("'results' should be a Confidence object, not a string.")
-    flashlfq = pd.concat([_format_flashlfq(c) for c in results])
-    flashlfq.to_csv(os.path.join(output_dir, file_name), sep="\t", index=False)
-    return os.path.join(output_dir, file_name)
-
-
-def _format_flashlfq(conf):
-    # Do some error checking for the required columns:
-    required = ["filename", "calcmass", "rt", "charge"]
-    missing = [c for c in required if conf._optional_columns[c] is None]
-    if missing:
-        missing = ", ".join([c + "_column" for c in missing])
-        raise ValueError(
-            "The following parameters must be specified when loading a "
-            "collection of PSMs in order to save them in FlashLFQ format: "
-            f"{missing}"
-        )
-
-    if conf._has_proteins:
-        proteins = conf._proteins
-    elif conf._protein_column is not None:
-        proteins = conf._protein_column
-    else:
-        proteins = None
-
-    # Get parameters
-    peptides = conf.peptides
-    filename_column = conf._optional_columns["filename"]
-    peptide_column = conf._peptide_column
-    mass_column = conf._optional_columns["calcmass"]
-    rt_column = conf._optional_columns["rt"]
-    charge_column = conf._optional_columns["charge"]
-    eval_fdr = conf._eval_fdr
-
-    # Create FlashLFQ dataframe
-    logger.info("FDR threshold for FlashLFQ export: %.4f", eval_fdr)
-    passing = peptides["mokapot q-value"] <= eval_fdr
-
-    out_df = pd.DataFrame()
-    out_df["File Name"] = peptides.loc[passing, filename_column].apply(lambda x: Path(x).name)
-
-    seq = peptides.loc[passing, peptide_column]
-    base_seq = (
-        seq.str.replace(r"[\[\(].*?[\]\)]", "", regex=True)
-        .str.replace(r"^.*?\.", "", regex=True)
-        .str.replace(r"\..*?$", "", regex=True)
+def rescore(
+    psms: PsmContainer,
+    model=None,
+    rescoring_features: Sequence[str] | None = None,
+    test_fdr: float = 0.01,
+    rng: int = 1,
+    **kwargs,
+):
+    """Rescore canonical candidates deterministically with Mokapot."""
+    dataset = convert_to_mokapot_dataset(psms, rescoring_features=rescoring_features)
+    logger.info("Rescoring PSMs with mokapot.")
+    return mokapot_lib.brew(
+        dataset,
+        model=model,
+        test_fdr=test_fdr,
+        rng=rng,
+        **kwargs,
     )
-
-    out_df["Base Sequence"] = base_seq
-    out_df["Full Sequence"] = seq
-    out_df["Peptide Monoisotopic Mass"] = peptides.loc[passing, mass_column]
-    out_df["Scan Retention Time"] = peptides.loc[passing, rt_column] / 60
-    out_df["Precursor Charge"] = peptides.loc[passing, charge_column]
-
-    if isinstance(proteins, str):
-        # TODO: Add delimiter sniffing.
-        prots = peptides.loc[passing, proteins].str.replace("\t", "; ", regex=False)
-    elif proteins is None:
-        prots = ""
-    else:
-        prots = base_seq.map(proteins.peptide_map.get)
-        shared = pd.isna(prots)
-        prots.loc[shared] = base_seq[shared].map(proteins.shared_peptides.get)
-
-    out_df["Protein Accession"] = prots
-    missing = pd.isna(out_df["Protein Accession"])
-    num_missing = missing.sum()
-    if num_missing:
-        logger.warning(
-            "- Discarding %i peptides that could not be mapped to protein groups",
-            num_missing,
-        )
-        out_df = out_df.loc[~missing, :]
-
-    return out_df
