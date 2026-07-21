@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from deeplc import DeepLC
 
-from optimhc import utils
 from optimhc.feature.base_feature_generator import BaseFeatureGenerator
 from optimhc.feature.factory import feature_generator_factory
 from optimhc.psm_container import PsmContainer
@@ -195,31 +194,19 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         to Unimod format.
         """
         df_deeplc = pd.DataFrame()
-        df_psm = self.psms.psms
-        df_deeplc["original_seq"] = df_psm[self.psms.peptide_column]
-        df_deeplc["label"] = df_psm[self.psms.label_column]
+        df_psm = self.psms.df
+        df_deeplc["original_seq"] = df_psm["sequence"]
+        df_deeplc["label"] = ~df_psm["is_decoy"]
+        df_deeplc["seq"] = df_psm["sequence"]
+        df_deeplc["modifications"] = [
+            _deeplc_modifications(mods, sites)
+            for mods, sites in zip(df_psm["mods"], df_psm["mod_sites"])
+        ]
 
-        if self.remove_pre_nxt_aa:
-            df_deeplc["seq"] = df_deeplc["original_seq"].apply(utils.strip_flanking_and_charge)
-        else:
-            df_deeplc["seq"] = df_deeplc["original_seq"]
-
-        # Apply extract_unimod_from_peptidoform once and store both results.
-        if self.mod_dict is None:
-            logger.warning("No mod_dict provided. Removing modifications.")
-            df_deeplc["seq"] = df_deeplc["seq"].apply(lambda x: utils.remove_modifications(x))
-            df_deeplc["modifications"] = ""
-        else:
-            extracted_results = df_deeplc["seq"].apply(
-                lambda x: utils.extract_unimod_from_peptidoform(x, mod_dict=self.mod_dict)
-            )
-            df_deeplc["seq"] = extracted_results.apply(lambda x: x[0])
-            df_deeplc["modifications"] = extracted_results.apply(lambda x: x[1])
-
-        if self.psms.retention_time_column is None:
+        if "retention_time" not in df_psm.columns:
             raise ValueError("DeepLC requires retention time values.")
 
-        df_deeplc["tr"] = df_psm[self.psms.retention_time_column]
+        df_deeplc["tr"] = df_psm["retention_time"]
         df_deeplc["score"] = df_psm[self.calibration_criteria_column]
 
         logger.debug("DeepLC input DataFrame:")
@@ -475,9 +462,20 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
             mod_dict=mod_dict,
         )
 
-    def apply(self, psms, source):
+    def apply(self, psms):
         features = self.generate_features()
-        psms.add_features_by_index(features[self.feature_columns], source=source)
+        features = features[self.feature_columns].copy()
+        features.insert(0, "psm_id", psms.df["psm_id"].to_numpy())
+        psms.add_features(features, on="psm_id", columns=self.feature_columns)
+
+
+def _deeplc_modifications(mods, sites):
+    if not mods:
+        return ""
+    values = []
+    for name, site in zip(str(mods).split(";"), str(sites).split(";")):
+        values.extend((site, name.split("@", 1)[0]))
+    return "|".join(values)
 
 
 feature_generator_factory.register_generator("DeepLC", DeepLCFeatureGenerator)

@@ -36,6 +36,10 @@ class BaseFeatureGenerator(ABC):
         """Generate features and return them as a DataFrame."""
         ...
 
+    def feature_groups(self, name: str) -> dict[str, tuple[str, ...]]:
+        """Declare the experiment group(s) produced by this generator."""
+        return {name: tuple(self.feature_columns)}
+
     @classmethod
     def from_config(
         cls,
@@ -57,7 +61,7 @@ class BaseFeatureGenerator(ABC):
         """
         raise NotImplementedError(f"{cls.__name__} must implement from_config()")
 
-    def apply(self, psms: PsmContainer, source: str) -> None:
+    def apply(self, psms: PsmContainer) -> None:
         """Generate features and merge them into the PsmContainer.
 
         The default implementation merges by peptide column using
@@ -68,13 +72,16 @@ class BaseFeatureGenerator(ABC):
         ----------
         psms : PsmContainer
             The PSM container to add features to (modified in-place).
-        source : str
-            Name of this feature source (e.g. ``"Basic"``, ``"PWM"``).
         """
         features = self.generate_features()
+        keys = list(self.id_column)
+        canonical_keys = ["sequence" if key == "Peptide" else key for key in keys]
+        features = features.rename(columns=dict(zip(keys, canonical_keys)))
+        features = features.drop_duplicates(
+            subset=[*canonical_keys, *self.feature_columns]
+        )
         psms.add_features(
             features,
-            psms_key=psms.peptide_column,
-            feature_key=self.id_column,
-            source=source,
+            on=canonical_keys,
+            columns=self.feature_columns,
         )

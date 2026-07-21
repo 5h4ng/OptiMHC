@@ -21,7 +21,14 @@ DEFAULT_CONFIG = {
     "showProgress": True,
     "logLevel": "INFO",
     "keepIntermediate": True,
-    "rescore": {"testFDR": 0.01, "trainFDR": 0.01, "model": "Percolator", "numJobs": 1},
+    "featureGenerator": None,
+    "rescore": {
+        "testFDR": 0.01,
+        "trainFDR": 0.01,
+        "model": "Percolator",
+        "numJobs": 1,
+        "seed": 1,
+    },
 }
 
 
@@ -208,13 +215,6 @@ class Config:
             logger.error("inputType must be 'pepxml' or 'pin'")
             raise ValueError("inputType must be 'pepxml' or 'pin'")
 
-        if (
-            self._config["inputType"] == "pin"
-            and self._config.get("retentionTimeColumn", None) is None
-        ):
-            logger.error("retentionTimeColumn must be specified when inputType is 'pin'")
-            raise ValueError("retentionTimeColumn must be specified when inputType is 'pin'")
-
         input_files = self._config["inputFile"]
         if not isinstance(input_files, (list, tuple)):
             logger.debug(f"inputFile is not a list or tuple: {input_files}. Converting to list.")
@@ -258,16 +258,23 @@ class Config:
                 logger.error(f"Invalid feature generator: {fg['name']}")
                 raise ValueError(f"Invalid feature generator: {fg['name']}")
 
-        valid_sources = valid_generators | {"Original", "ContigFeatures"}
         if self._config.get("experiments", None) is not None:  # experiment mode
             if not isinstance(self._config["experiments"], list):
                 logger.error("experiments must be a list")
                 raise ValueError("experiments must be a list")
             for exp in self._config["experiments"]:
-                for source in exp.get("source", []):
-                    if source not in valid_sources:
-                        logger.error(f"Invalid source in experiments: {source}")
-                        raise ValueError(f"Invalid source in experiments: {source}")
+                if "source" in exp and "features" in exp:
+                    raise ValueError(
+                        "Experiment configs must use either 'source' or 'features', not both."
+                    )
+                for selection in ("source", "features"):
+                    values = exp.get(selection, [])
+                    if not isinstance(values, list) or not all(
+                        isinstance(value, str) for value in values
+                    ):
+                        raise ValueError(
+                            f"Experiment '{selection}' must be a list of names."
+                        )
 
     def to_dict(self):
         return deepcopy(self._config)

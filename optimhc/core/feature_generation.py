@@ -1,12 +1,56 @@
 import gc
+import importlib
 import logging
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 
-import optimhc.feature  # noqa: F401 -- triggers generator registration
+import pandas as pd
+
 from optimhc.feature.factory import feature_generator_factory
 
 logger = logging.getLogger(__name__)
 
 _BINDING_GENERATORS = frozenset({"NetMHCpan", "NetMHCIIpan", "MHCflurry"})
+_GENERATOR_MODULES = {
+    "Basic": "basic",
+    "DeepLC": "deeplc",
+    "MHCflurry": "mhcflurry",
+    "NetMHCIIpan": "netmhciipan",
+    "NetMHCpan": "netmhcpan",
+    "OverlappingPeptide": "overlapping_peptide",
+    "PWM": "pwm",
+    "SpectralSimilarity": "spectral_similarity",
+}
+
+
+@dataclass(frozen=True)
+class FeatureGenerationResult:
+    """Run-local feature groups plus optional raw predictor outputs."""
+
+    feature_groups: dict[str, tuple[str, ...]]
+    raw_predictions: dict[str, pd.DataFrame]
+
+
+def select_feature_groups(
+    feature_groups: Mapping[str, Sequence[str]],
+    sources: Sequence[str],
+) -> tuple[str, ...]:
+    """Resolve legacy experiment source names to explicit feature columns."""
+    unknown = [source for source in sources if source not in feature_groups]
+    if unknown:
+        available = ", ".join(feature_groups)
+        raise ValueError(
+            f"Unknown feature source(s): {unknown}. Available sources: {available}"
+        )
+
+    selected = []
+    seen = set()
+    for source in sources:
+        for column in feature_groups[source]:
+            if column not in seen:
+                selected.append(column)
+                seen.add(column)
+    return tuple(selected)
 
 
 def generate_features(psms, config):
@@ -22,16 +66,17 @@ def generate_features(psms, config):
 
     Returns
     -------
-    dict
-        Raw predictions from configured binding generators, keyed by generator name.
-        Empty when ``keepIntermediate`` is disabled.
+    FeatureGenerationResult
+        Generator-to-column groups for experiment selection and optional raw
+        binding predictions for intermediate output.
     """
     feature_generators = config.get("featureGenerator", None)
+    feature_groups = {"Original": tuple(psms.feature_columns)}
+    raw_predictions = {}
     if not feature_generators:
-        return {}
+        return FeatureGenerationResult(feature_groups, raw_predictions)
 
     keep_intermediate = config.get("keepIntermediate", True)
-    raw_predictions = {}
 
     for generator_config in feature_generators:
         if not isinstance(generator_config, dict):
@@ -42,9 +87,34 @@ def generate_features(psms, config):
         params = generator_config.get("params", {})
 
         logger.info(f"Generating features with {name}...")
+        try:
+            module = _GENERATOR_MODULES[name]
+        except KeyError as error:
+            raise ValueError(f"Unknown feature generator: '{name}'.") from error
+        importlib.import_module(f"optimhc.feature.{module}")
         generator_cls = feature_generator_factory.get_generator(name)
         generator = generator_cls.from_config(psms, config, params)
-        generator.apply(psms, source=name)
+        previous_columns = set(psms.feature_columns)
+        generator.apply(psms)
+
+        generated_columns = tuple(
+            column for column in psms.feature_columns if column not in previous_columns
+        )
+        declared_groups = generator.feature_groups(name)
+        declared_columns = tuple(
+            column for columns in declared_groups.values() for column in columns
+        )
+        if set(generated_columns) != set(declared_columns):
+            raise ValueError(
+                f"Generator '{name}' added {generated_columns}, but declared "
+                f"{declared_columns}."
+            )
+        duplicate_groups = set(feature_groups).intersection(declared_groups)
+        if duplicate_groups:
+            raise ValueError(f"Feature groups declared more than once: {duplicate_groups}")
+        feature_groups.update(
+            {group: tuple(columns) for group, columns in declared_groups.items()}
+        )
 
         if keep_intermediate and name in _BINDING_GENERATORS:
             predictions = generator.raw_predictions
@@ -54,7 +124,7 @@ def generate_features(psms, config):
         del generator
         gc.collect()
 
-    return raw_predictions
+    return FeatureGenerationResult(feature_groups, raw_predictions)
 
 
 def _build_ba_parquet(raw_predictions, output_path):

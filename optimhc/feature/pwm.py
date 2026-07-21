@@ -702,7 +702,7 @@ class PWMFeatureGenerator(BaseFeatureGenerator):
     @classmethod
     def from_config(cls, psms, config, params):
         return cls(
-            peptides=list(set(psms.peptides)),
+            peptides=list(set(psms.df["sequence"])),
             alleles=config.get("allele", []),
             mhc_class=params.get("class", "I"),
             remove_modification=True,
