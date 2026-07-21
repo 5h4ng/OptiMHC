@@ -1,190 +1,242 @@
-import logging
+"""Reader for Percolator input (PIN) files."""
+
+from __future__ import annotations
+
 import re
-from typing import List, Optional, Tuple, Union
+from pathlib import Path
 
 import pandas as pd
 
+from optimhc.parser.modifications import modification_from_delta, modification_from_unimod
 from optimhc.psm_container import PsmContainer
-
-logger = logging.getLogger(__name__)
+from optimhc.utils import strip_flanking_and_charge
 
 
 def read_pin(
-    pin_files: Union[str, List[str]],
-    retention_time_column: Optional[str] = None,
-    remove_pre_nxt_aa: bool = False,
+    pin_file: str | Path,
+    retention_time_column: str | None = None,
 ) -> PsmContainer:
-    """
-    Read PSMs from a Percolator INput (PIN) file.
+    """Read one PIN file into the canonical PSM table."""
+    path = Path(pin_file)
+    pin = _read_single_pin_as_df(path)
+    columns = {column.lower(): column for column in pin.columns}
 
-    Parameters
-    ----------
-    pin_files : Union[str, List[str]]
-        The file path to the PIN file or a list of file paths.
-    retention_time_column : Optional[str], optional
-        The column containing the retention time. If None, no retention time
-        will be included.
+    spec_id = _required_column(columns, "specid")
+    label = _required_column(columns, "label")
+    scan = _required_column(columns, "scannr")
+    peptide = _required_column(columns, "peptide")
+    proteins = _required_column(columns, "proteins")
+    rank = columns.get("rank")
+    filename = columns.get("filename")
+    exp_mass = columns.get("expmass")
+    calc_mass = columns.get("calcmass")
 
-    Returns
-    -------
-    PsmContainer
-        A PsmContainer object containing the PSM data.
-
-    Notes
-    -----
-    This function:
-    1. Reads PIN file(s) into a DataFrame
-    2. Identifies required columns (case-insensitive)
-    3. Processes scan IDs and hit ranks (Only support FragPipe PIN)
-    4. Converts data types appropriately
-    5. Creates a PsmContainer with the processed data
-    """
-    logger.info("Reading PIN file(s) into PsmContainer.")
-    if isinstance(pin_files, str):
-        pin_files = [pin_files]
-
-    pin_df = pd.concat([_read_single_pin_as_df(pin_file) for pin_file in pin_files])
-    logger.info(f"Read {len(pin_df)} PSMs from {len(pin_files)} PIN files.")
-    logger.debug(pin_df.head())
-    logger.debug(pin_df.columns)
-    logger.debug(pin_df.iloc[0])
-
-    def find_required_columns(col: str, columns: List[str]) -> str:
-        """
-        Case-insensitive search for a column in the DataFrame.
-        Returns the matching column name with original casing.
-        """
-        col_lower = col.lower()
-        column_map = {c.lower(): c for c in columns}
-        if col_lower not in column_map:
-            raise ValueError(f"Column '{col}' not found in PSM data (case-insensitive).")
-        return column_map[col_lower]
-
-    # non-feature columns (case-insensitive search)
-    label = find_required_columns("Label", pin_df.columns)
-    scan = find_required_columns("ScanNr", pin_df.columns)
-    specid = find_required_columns("SpecId", pin_df.columns)
-    peptide = find_required_columns("Peptide", pin_df.columns)
-    protein = find_required_columns("Proteins", pin_df.columns)
-
-    # Comet: P2PI20160713_pilling_C1RA2_BB72_P1_31_3_1
-    # Fragpipe: P2PI20160713_pilling_C1RA2_BB72_P1.3104.3104.2_1
-
-    # Try to parse rank from SpecId
-    def parse_specid(specid: str) -> Tuple[str, int]:
-        if "_" in specid:
-            parts = specid.rsplit("_", 1)
-            if len(parts) != 2:
-                logger.warning(f"SpecId format unexpected: {specid}, using default rank 1")
-                return 1
-            try:
-                hit_rank = int(parts[1])
-                return hit_rank
-            except ValueError:
-                logger.warning(f"Could not parse rank from SpecId: {specid}, using default rank 1")
-                return 1
-        else:
-            return 1
-
-    hit_rank = "rank"
-    if "rank" in [c.lower() for c in pin_df.columns]:
-        pass
+    if retention_time_column is not None:
+        rt = _required_column(columns, retention_time_column.lower())
     else:
-        # Parse SpecId to extract hit rank and update both columns
-        pin_df["rank"] = pin_df[specid].apply(parse_specid)
+        rt = next(
+            (
+                columns[name]
+                for name in ("retention_time", "retentiontime", "ret_time")
+                if name in columns
+            ),
+            None,
+        )
 
-    retention_time_column = (
-        find_required_columns(retention_time_column, pin_df.columns)
-        if retention_time_column
-        else None
+    scan_values = pd.to_numeric(pin[scan], errors="raise").astype(int)
+    rank_values = (
+        pd.to_numeric(pin[rank], errors="raise").astype(int)
+        if rank is not None
+        else pin[spec_id].map(_rank_from_spec_id).astype(int)
     )
+    charge_values = _read_charge(pin)
+    fallback_run = _normalize_run(path.stem.removesuffix("_edited"))
+    run_values = [
+        _normalize_run(value) if filename is not None else _run_from_spec_id(sid, sn, fallback_run)
+        for sid, sn, value in zip(
+            pin[spec_id],
+            scan_values,
+            pin[filename] if filename is not None else [fallback_run] * len(pin),
+        )
+    ]
+    peptidoforms = pin[peptide].map(_parse_pin_peptide)
+    labels = pd.to_numeric(pin[label], errors="raise")
+    if not labels.isin((-1, 1)).all():
+        raise ValueError("PIN labels must be exactly -1 or 1.")
 
-    # col: charge_[1,2,3,...] = 0, 1
-    charge_map = {
-        col: int(re.search(r"(\d+)", col).group(1))
-        for col in pin_df.columns
-        if re.search(r"charge[_]?(\d+)", col, re.IGNORECASE)
+    metadata = {
+        spec_id,
+        label,
+        scan,
+        peptide,
+        proteins,
+        *(column for column in (rank, filename, exp_mass, calc_mass, rt) if column is not None),
     }
+    feature_columns = tuple(column for column in pin.columns if column not in metadata)
+    if rank is None or rank not in feature_columns:
+        feature_columns = (*feature_columns, "rank")
 
-    def extract_charge(row):
-        for col, num in charge_map.items():
-            if int(float(row[col])) == 1:
-                return num
-        return None
-
-    pin_df["Charge"] = pin_df.apply(extract_charge, axis=1)
-
-    # feature columns: columns that are not non-feature columns
-    non_feature_columns = [label, scan, specid, peptide, protein, hit_rank, "Charge"]
-    feature_columns = [col for col in pin_df.columns if col not in non_feature_columns]
-
-    logger.info(
-        f"Columns: label={label}, scan={scan}, specid={specid}, peptide={peptide}, "
-        f"protein={protein}, hit_rank={hit_rank}, retention_time={retention_time_column}, "
-        f"features={feature_columns}"
+    canonical = pd.DataFrame(
+        {
+            "psm_id": range(len(pin)),
+            "run": run_values,
+            "scan": scan_values.to_numpy(),
+            "rank": rank_values.to_numpy(),
+            "sequence": [item[0] for item in peptidoforms],
+            "mods": [item[1] for item in peptidoforms],
+            "mod_sites": [item[2] for item in peptidoforms],
+            "charge": charge_values.to_numpy(),
+            "proteins": pin[proteins].map(_normalize_proteins),
+            "is_decoy": labels.eq(-1).to_numpy(),
+        }
     )
+    if rt is not None:
+        retention_time = pd.to_numeric(pin[rt], errors="raise")
+        if rt.lower() == "retentiontime":
+            retention_time = retention_time * 60
+        canonical["retention_time"] = retention_time
+    if exp_mass is not None:
+        canonical["exp_mass"] = pd.to_numeric(pin[exp_mass], errors="raise")
+    if calc_mass is not None:
+        canonical["calc_mass"] = pd.to_numeric(pin[calc_mass], errors="raise")
+    for column in feature_columns:
+        if column == "rank":
+            continue
+        canonical[column] = pd.to_numeric(pin[column], errors="raise").to_numpy()
 
-    pin_df[scan] = pin_df[scan].astype(int)
-    pin_df[specid] = pin_df[specid].astype(str)
-    pin_df[peptide] = pin_df[peptide].astype(str)
-    pin_df[protein] = pin_df[protein].astype(str)
-    pin_df[hit_rank] = pin_df[hit_rank].astype(float).astype(int)
-    pin_df["Charge"] = pin_df["Charge"].astype(float).astype(int)
-    if retention_time_column:
-        pin_df[retention_time_column] = pin_df[retention_time_column].astype(float)
-    for col in feature_columns:
-        pin_df[col] = pin_df[col].astype(float)
-
-    # label = 1 for target, -1 for decoy. Convert to Boolean.
-    pin_df[label] = pin_df[label] == "1"
-    rescoring_features = {"Original": feature_columns}
-
-    return PsmContainer(
-        psms=pin_df,
-        label_column=label,
-        scan_column=scan,
-        spectrum_column=specid,
-        ms_data_file_column=None,
-        peptide_column=peptide,
-        protein_column=protein,
-        charge_column="Charge",
-        rescoring_features=rescoring_features,
-        hit_rank_column=hit_rank,
-        retention_time_column=retention_time_column,
-    )
+    return PsmContainer(canonical, feature_columns=feature_columns)
 
 
-def _read_single_pin_as_df(pin_file: str) -> pd.DataFrame:
-    """
-    Read a single PIN file into a DataFrame.
+def _read_single_pin_as_df(pin_file: str | Path) -> pd.DataFrame:
+    with Path(pin_file).open() as handle:
+        header = handle.readline().rstrip("\n").split("\t")
+        rows = []
+        for line in handle:
+            values = line.rstrip("\n").split("\t")
+            protein_count = len(values) - len(header) + 1
+            rows.append(values[: len(values) - protein_count] + ["\t".join(values[-protein_count:])])
+    return pd.DataFrame(rows, columns=header)
 
-    Parameters
-    ----------
-    pin_file : str
-        The file path to the PIN file.
 
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame containing the PSM data.
+def _required_column(columns: dict[str, str], name: str) -> str:
+    try:
+        return columns[name]
+    except KeyError as error:
+        raise ValueError(f"Column '{name}' not found in PIN data.") from error
 
-    Notes
-    -----
-    This function:
-    1. Reads the PIN file header
-    2. Processes the proteins column as a tab-separated list
-    3. Creates a DataFrame with the processed data
-    """
-    logger.info(f"Reading PIN file: {pin_file}")
-    with open(pin_file, "r") as f:
-        header = f.readline().strip().split("\t")
-        header_len = len(header)
-        data = []
-        for line in f:
-            parts = line.strip().split("\t")
-            proteins_column_num = len(parts) - header_len + 1
-            proteins = "\t".join(parts[-proteins_column_num:])
-            data.append(parts[: len(parts) - proteins_column_num] + [proteins])
-    df = pd.DataFrame(data, columns=header)
-    logger.debug(f"Header: {header}")
-    return df
+
+def _read_charge(pin: pd.DataFrame) -> pd.Series:
+    direct = next((column for column in pin.columns if column.lower() == "charge"), None)
+    if direct is not None:
+        return pd.to_numeric(pin[direct], errors="raise").astype(int)
+
+    charge_columns = {
+        column: int(match.group(1))
+        for column in pin.columns
+        if (match := re.fullmatch(r"charge_?(\d+)(?:_or_more)?", column, re.IGNORECASE))
+    }
+    if not charge_columns:
+        raise ValueError("PIN data must contain charge or one-hot charge columns.")
+
+    def selected_charge(row: pd.Series) -> int:
+        selected = [charge for column, charge in charge_columns.items() if float(row[column]) == 1]
+        if len(selected) != 1:
+            raise ValueError("Each PIN row must select exactly one charge state.")
+        return selected[0]
+
+    return pin.apply(selected_charge, axis=1).astype(int)
+
+
+def _rank_from_spec_id(spec_id: object) -> int:
+    match = re.search(r"_(\d+)$", str(spec_id))
+    return int(match.group(1)) if match else 1
+
+
+def _run_from_spec_id(spec_id: object, scan: int, fallback: str) -> str:
+    text = str(spec_id)
+    marker = f".{scan}."
+    return _normalize_run(text.split(marker, 1)[0]) if marker in text else fallback
+
+
+def _normalize_run(value: object) -> str:
+    name = Path(str(value)).name
+    for suffix in (".mzML", ".mzml", ".raw", ".RAW"):
+        if name.endswith(suffix):
+            return name[: -len(suffix)]
+    return name
+
+
+def _parse_pin_peptide(value: object) -> tuple[str, str, str]:
+    peptide = strip_flanking_and_charge(str(value))
+    sequence: list[str] = []
+    mods: list[str] = []
+    sites: list[str] = []
+
+    nterm = re.match(r"^\[UNIMOD:(\d+)\]-", peptide, re.IGNORECASE)
+    if nterm:
+        mods.append(modification_from_unimod(int(nterm.group(1)), site=0))
+        sites.append("0")
+        peptide = peptide[nterm.end() :]
+    cterm = re.search(r"-\[UNIMOD:(\d+)\]$", peptide, re.IGNORECASE)
+    cterm_mod = None
+    if cterm:
+        cterm_mod = modification_from_unimod(int(cterm.group(1)), site=-1)
+        peptide = peptide[: cterm.start()]
+
+    index = 0
+    while index < len(peptide):
+        terminal = None
+        if peptide.startswith("n[", index) and index == 0:
+            terminal = 0
+        elif peptide.startswith("c[", index) and sequence:
+            terminal = -1
+        if terminal is not None:
+            end = peptide.find("]", index + 2)
+            if end < 0:
+                raise ValueError(f"Invalid modified peptide: {value}")
+            try:
+                mass = float(peptide[index + 2 : end])
+            except ValueError as error:
+                raise ValueError(f"Unknown terminal modification in '{value}'.") from error
+            mods.append(modification_from_delta(mass, site=terminal))
+            sites.append(str(terminal))
+            index = end + 1
+            continue
+        if peptide[index] == "[":
+            end = peptide.find("]", index)
+            if end < 0 or not sequence:
+                raise ValueError(f"Invalid modified peptide: {value}")
+            annotation = peptide[index + 1 : end]
+            unimod = re.fullmatch(r"UNIMOD:(\d+)", annotation, re.IGNORECASE)
+            if unimod:
+                mod_name = modification_from_unimod(
+                    int(unimod.group(1)), residue=sequence[-1]
+                )
+                mod_site = len(sequence)
+            else:
+                try:
+                    mass = float(annotation)
+                except ValueError as error:
+                    raise ValueError(f"Unknown modification '{annotation}'.") from error
+                try:
+                    mod_name = modification_from_delta(mass, residue=sequence[-1])
+                    mod_site = len(sequence)
+                except ValueError:
+                    if len(sequence) != 1:
+                        raise
+                    mod_name = modification_from_delta(mass, site=0)
+                    mod_site = 0
+            mods.append(mod_name)
+            sites.append(str(mod_site))
+            index = end + 1
+        else:
+            sequence.append(peptide[index])
+            index += 1
+    if cterm_mod is not None:
+        mods.append(cterm_mod)
+        sites.append("-1")
+    return "".join(sequence), ";".join(mods), ";".join(sites)
+
+
+def _normalize_proteins(value: object) -> str:
+    return ";".join(part for part in re.split(r"[;\t]+", str(value)) if part)

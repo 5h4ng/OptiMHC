@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<msms_pipeline_analysis xmlns="http://regis-web.systemsbiology.net/pepXML">
+  <msms_run_summary base_name="/raw/run_a" raw_data_type="raw" raw_data=".mzML">
+    <spectrum_query spectrum="run_a.00010.00010.2" start_scan="10" end_scan="10" precursor_neutral_mass="500.0" assumed_charge="2" retention_time_sec="12.5">
+      <search_result>
+        <search_hit hit_rank="1" peptide="PEPM" protein="P1" calc_neutral_pep_mass="499.9" num_matched_ions="4" tot_num_ions="8">
+          <modification_info modified_peptide="PEPM[147.0354]">
+            <mod_aminoacid_mass position="4" mass="147.0354"/>
+          </modification_info>
+          <search_score name="hyperscore" value="20.0"/>
+        </search_hit>
+        <search_hit hit_rank="2" peptide="EDIT" protein="DECOY_P1" calc_neutral_pep_mass="501.0" num_matched_ions="2" tot_num_ions="8">
+          <alternative_protein protein="DECOY_P2"/>
+          <search_score name="hyperscore" value="10.0"/>
+        </search_hit>
+      </search_result>
+    </spectrum_query>
+  </msms_run_summary>
+</msms_pipeline_analysis>
