@@ -21,7 +21,7 @@ The **SpectralSimilarity** feature (`name: SpectralSimilarity`) compares experim
 
 ### Step 1: Spectrum Extraction
 
-Experimental MS2 spectra are extracted from mzML files. Each spectrum is associated with a PSM through the spectrum ID pattern. The m/z and intensity arrays are sorted by m/z.
+Experimental MS2 spectra are extracted from mzML files. Canonical `run` resolves to `<mzmlDir>/<run>.mzML`, and `scan` selects the spectrum. The m/z and intensity arrays are sorted by m/z.
 
 ### Step 2: Theoretical Spectrum Prediction
 
@@ -134,7 +134,6 @@ featureGenerator:
   - name: SpectralSimilarity
     params:
       mzmlDir: ../data               # Directory containing mzML files
-      spectrumIdPattern: (.+?)\.\d+\.\d+\.\d+  # Regex to link PSMs to mzML files
       model: AlphaPeptDeep_ms2_generic          # Koina prediction model
       collisionEnergy: 28            # Collision energy for prediction
       instrument: LUMOS              # Instrument type for prediction

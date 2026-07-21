@@ -7,10 +7,13 @@ OptiMHC uses a modular feature generation system. Each feature computes a set of
 All features inherit from `BaseFeatureGenerator` and implement a common interface:
 
 - **`feature_columns`** — the list of output column names.
+- **`feature_groups(name)`** — the experiment category and columns exposed by the generator.
 - **`id_column`** — the key column(s) used to merge features back into the PsmContainer.
 - **`generate_features()`** — computes and returns a DataFrame of features.
 
 Features are configured in the YAML file as a list of `{name, params}` entries. The pipeline instantiates each feature, calls `generate_features()`, and merges the result into the PsmContainer.
+The same declaration builds a run-local feature manifest, allowing experiment YAML to select a
+generator name without listing all of its output columns.
 
 ## Feature Categories
 
