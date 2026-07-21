@@ -38,28 +38,11 @@ def test_msfragger_pin_and_pepxml_have_the_same_candidate_identity():
     )
 
 
-def test_msbooster_pin_files_keep_their_runs_and_features():
-    containers = [
-        read_pin(REAL_DATA / f"LP20210421_HT_DCfeeding_Exp1_HLAII_0hr_fxn0{run}_edited.pin")
-        for run in (1, 2)
-    ]
-
-    assert [len(container) for container in containers] == [10_515, 20_017]
-    assert [container.df["run"].nunique() for container in containers] == [1, 1]
-    assert containers[0].df["run"].iat[0] != containers[1].df["run"].iat[0]
-    assert {
-        "pred_RT_real_units",
-        "unweighted_spectral_entropy",
-        "delta_RT_loess",
-    }.issubset(containers[0].feature_columns)
-
-
-def test_pipeline_combines_msbooster_runs_before_assigning_psm_ids(tmp_path):
+def test_pipeline_combines_msfragger_pin_runs_before_assigning_psm_ids(tmp_path):
     from optimhc.core.pipeline import Pipeline
 
     inputs = [
-        str(REAL_DATA / f"LP20210421_HT_DCfeeding_Exp1_HLAII_0hr_fxn0{run}_edited.pin")
-        for run in (1, 2)
+        str(REAL_DATA / f"LP20210421_HT_DCfeeding_Exp1_HLAII_0hr_fxn0{run}.pin") for run in (1, 2)
     ]
     pipeline = Pipeline(
         {

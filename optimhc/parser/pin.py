@@ -50,7 +50,7 @@ def read_pin(
         else pin[spec_id].map(_rank_from_spec_id).astype(int)
     )
     charge_values = _read_charge(pin)
-    fallback_run = _normalize_run(path.stem.removesuffix("_edited"))
+    fallback_run = _normalize_run(path.stem)
     run_values = [
         _normalize_run(value) if filename is not None else _run_from_spec_id(sid, sn, fallback_run)
         for sid, sn, value in zip(
