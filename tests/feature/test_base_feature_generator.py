@@ -16,9 +16,7 @@ class SequenceFeature(BaseFeatureGenerator):
         return ["Peptide"]
 
     def generate_features(self):
-        return pd.DataFrame(
-            {"Peptide": ["PEPTIDE", "PEPTIDE"], "score": [1.0, 1.0]}
-        )
+        return pd.DataFrame({"Peptide": ["PEPTIDE", "PEPTIDE"], "score": [1.0, 1.0]})
 
 
 def test_default_sequence_feature_join_collapses_identical_duplicate_predictions():

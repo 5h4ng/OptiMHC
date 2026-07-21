@@ -54,9 +54,7 @@ def visualize_target_decoy_features(psms: PsmContainer, num_cols=5, save_path=No
     num_decoys = len(psms_top_hits[psms_top_hits["is_decoy"]])
     logger.debug(f"Number of true hits: {num_true_hits}")
     logger.debug(f"Number of decoys: {num_decoys}")
-    psms_top_hits["target_decoy"] = psms_top_hits["is_decoy"].map(
-        {False: "Target", True: "Decoy"}
-    )
+    psms_top_hits["target_decoy"] = psms_top_hits["is_decoy"].map({False: "Target", True: "Decoy"})
 
     for i, feature in enumerate(rescoring_features):
         try:

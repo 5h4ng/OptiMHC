@@ -272,9 +272,7 @@ class Config:
                     if not isinstance(values, list) or not all(
                         isinstance(value, str) for value in values
                     ):
-                        raise ValueError(
-                            f"Experiment '{selection}' must be a list of names."
-                        )
+                        raise ValueError(f"Experiment '{selection}' must be a list of names.")
 
     def to_dict(self):
         return deepcopy(self._config)

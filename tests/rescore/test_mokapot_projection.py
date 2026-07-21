@@ -37,7 +37,6 @@ def _candidates():
     )
 
 
-
 def test_candidates_for_one_spectrum_share_the_mokapot_spectrum_key():
     projection = to_mokapot_dataframe(_candidates())
 
@@ -71,9 +70,13 @@ def test_in_memory_and_serialized_pin_create_equivalent_mokapot_datasets(tmp_pat
     write_pin(candidates, pin_path)
     serialized = mokapot.read_pin(pin_path)
 
-    assert in_memory._spectrum_columns == serialized._spectrum_columns == (
-        "filename",
-        "ScanNr",
+    assert (
+        in_memory._spectrum_columns
+        == serialized._spectrum_columns
+        == (
+            "filename",
+            "ScanNr",
+        )
     )
     assert in_memory._feature_columns == serialized._feature_columns
     assert in_memory._feature_columns == ("score", "rank", "Charge")
@@ -155,9 +158,7 @@ def test_seeded_rescoring_is_repeatable_and_competes_once_per_spectrum():
     for spectrum_index in range(600):
         winning_candidate_is_decoy = spectrum_index % 10 == 0
         for rank in (1, 2):
-            is_decoy = (
-                winning_candidate_is_decoy if rank == 1 else not winning_candidate_is_decoy
-            )
+            is_decoy = winning_candidate_is_decoy if rank == 1 else not winning_candidate_is_decoy
             records.append(
                 {
                     "psm_id": len(records),

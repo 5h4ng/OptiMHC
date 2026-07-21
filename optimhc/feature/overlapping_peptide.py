@@ -721,9 +721,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
     def feature_groups(self, name):
         groups = super().feature_groups(name)
         if self._overlapping_score:
-            groups["ContigFeatures"] = tuple(
-                _contig_feature_columns(self._overlapping_score)
-            )
+            groups["ContigFeatures"] = tuple(_contig_feature_columns(self._overlapping_score))
         return groups
 
 

@@ -39,9 +39,7 @@ def select_feature_groups(
     unknown = [source for source in sources if source not in feature_groups]
     if unknown:
         available = ", ".join(feature_groups)
-        raise ValueError(
-            f"Unknown feature source(s): {unknown}. Available sources: {available}"
-        )
+        raise ValueError(f"Unknown feature source(s): {unknown}. Available sources: {available}")
 
     selected = []
     seen = set()
@@ -106,8 +104,7 @@ def generate_features(psms, config):
         )
         if set(generated_columns) != set(declared_columns):
             raise ValueError(
-                f"Generator '{name}' added {generated_columns}, but declared "
-                f"{declared_columns}."
+                f"Generator '{name}' added {generated_columns}, but declared {declared_columns}."
             )
         duplicate_groups = set(feature_groups).intersection(declared_groups)
         if duplicate_groups:

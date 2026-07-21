@@ -362,9 +362,7 @@ class Pipeline:
             model_type = exp_config.get("model", self.model_type)
             n_jobs = exp_config.get("numJobs", self.n_jobs)
             if "source" in exp_config:
-                features = select_feature_groups(
-                    self.feature_groups, exp_config["source"]
-                )
+                features = select_feature_groups(self.feature_groups, exp_config["source"])
             else:
                 features = tuple(exp_config.get("features", psms.feature_columns))
             logger.info(f"Features used in experiment '{exp_name}': {features}")

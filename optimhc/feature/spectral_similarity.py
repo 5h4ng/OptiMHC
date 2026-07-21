@@ -835,9 +835,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         mzml_dir = params.get("mzmlDir", None)
         if mzml_dir is None:
             raise ValueError("mzmlDir is required for SpectralSimilarity feature generator.")
-        mz_file_paths = [
-            os.path.join(mzml_dir, f"{run}.mzML") for run in psms.df["run"]
-        ]
+        mz_file_paths = [os.path.join(mzml_dir, f"{run}.mzML") for run in psms.df["run"]]
         for mz_file_path in set(mz_file_paths):
             if not os.path.exists(mz_file_path):
                 logger.error(f"mzML file not found: {mz_file_path}")
