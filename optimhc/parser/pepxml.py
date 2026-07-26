@@ -38,9 +38,14 @@ def read_pepxml(
     exp_mz = psms["exp_mass"] / psms["charge"] + PROTON
     calc_mz = psms["calc_mass"] / psms["charge"] + PROTON
     psms["abs_mz_diff"] = (exp_mz - calc_mz).abs()
-    # assert tot_num_ions is never zero for pepxml
     if {"num_matched_ions", "tot_num_ions"}.issubset(psms.columns):
-        psms["matched_ions_ratio"] = psms["num_matched_ions"] / psms["tot_num_ions"]
+        if psms["tot_num_ions"].min() <= 0:
+            logger.warning(
+                "Skipping matched_ions_ratio because tot_num_ions contains "
+                "zero or negative values."
+            )
+        else:
+            psms["matched_ions_ratio"] = psms["num_matched_ions"] / psms["tot_num_ions"]
     if "num_matched_peptides" in psms.columns:
         psms["num_matched_peptides"] = np.log10(psms["num_matched_peptides"])
 

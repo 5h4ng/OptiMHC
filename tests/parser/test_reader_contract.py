@@ -42,7 +42,20 @@ def test_pepxml_reader_preserves_every_candidate_rank():
     assert candidates.df["mod_sites"].tolist() == ["4", ""]
     assert candidates.df["proteins"].tolist() == ["P1", "DECOY_P1;DECOY_P2"]
     assert candidates.df["is_decoy"].tolist() == [False, True]
+    assert candidates.df["matched_ions_ratio"].tolist() == [0.5, 0.25]
     assert {"hyperscore", "rank"}.issubset(candidates.feature_columns)
+
+
+def test_pepxml_reader_skips_matched_ions_ratio_for_nonpositive_totals(tmp_path, caplog):
+    fixture = (FIXTURES / "multi_rank_sample.pep.xml").read_text()
+    path = tmp_path / "zero-total-ions.pep.xml"
+    path.write_text(fixture.replace('tot_num_ions="8"', 'tot_num_ions="0"', 1))
+
+    candidates = read_pepxml(path)
+
+    assert "matched_ions_ratio" not in candidates.df
+    assert "matched_ions_ratio" not in candidates.feature_columns
+    assert "Skipping matched_ions_ratio" in caplog.text
 
 
 def test_exported_proforma_pin_can_be_read_back(tmp_path):
