@@ -131,7 +131,7 @@ class PsmContainer:
             how="left",
             on=keys,
             sort=False,
-            validate="many_to_one", 
+            validate="many_to_one",
         )
         for column in new_columns:
             self.df[column] = matched_features[column].to_numpy()
