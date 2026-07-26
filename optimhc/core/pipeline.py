@@ -72,6 +72,10 @@ class Pipeline:
         PsmContainer
             Object containing loaded PSMs.
 
+        All input files must expose the same non-charge feature columns. Charge
+        one-hot columns may differ and are filled with zero where absent. Files
+        are combined in configuration order, then ``psm_id`` is reassigned.
+
         Raises
         ------
         ValueError
@@ -105,23 +109,22 @@ class Pipeline:
                 for feature in containers[0].feature_columns
                 if CHARGE_FEATURE.fullmatch(feature) is None
             )
-            if any(
-                tuple(
+            for container in containers[1:]:
+                current_features = tuple(
                     feature
                     for feature in container.feature_columns
                     if CHARGE_FEATURE.fullmatch(feature) is None
                 )
-                != non_charge_features
-                for container in containers[1:]
-            ):
-                raise ValueError("All input files must declare the same rescoring features.")
+                if current_features != non_charge_features:
+                    raise ValueError("All input files must declare the same rescoring features.")
+
+            charge_feature_set = set()
+            for container in containers:
+                for feature in container.feature_columns:
+                    if CHARGE_FEATURE.fullmatch(feature) is not None:
+                        charge_feature_set.add(feature)
             charge_features = sorted(
-                {
-                    feature
-                    for container in containers
-                    for feature in container.feature_columns
-                    if CHARGE_FEATURE.fullmatch(feature) is not None
-                },
+                charge_feature_set,
                 key=lambda feature: (
                     int(CHARGE_FEATURE.fullmatch(feature).group(1)),
                     feature.lower(),
@@ -206,7 +209,7 @@ class Pipeline:
 
         train_fdr = getattr(self, "train_fdr", 0.01)
         import optimhc.rescore.model  # noqa: F401 -- register configured models lazily
-        from optimhc.rescore import mokapot as mokapot_adapter
+        from optimhc.rescore import mokapot
 
         model_cls = rescore_model_factory.get_model(model_type)
         model = model_cls.from_config(
@@ -217,7 +220,7 @@ class Pipeline:
         if rescoring_features is not None:
             kwargs["rescoring_features"] = rescoring_features
 
-        results, models = mokapot_adapter.rescore(
+        results, models = mokapot.rescore(
             psms,
             model=model,
             test_fdr=test_fdr,
@@ -254,10 +257,10 @@ class Pipeline:
             Exact feature subset used for both rescoring and PIN serialization.
         """
         output_dir = output_dir if output_dir is not None else self.output_dir
-        from optimhc.rescore import mokapot as mokapot_adapter
+        from optimhc.rescore import mokapot
 
         results.to_txt(dest_dir=output_dir, file_root=file_root, decoys=True)
-        mokapot_adapter.write_pin(
+        mokapot.write_pin(
             psms,
             os.path.join(output_dir, f"{file_root}.pin"),
             feature_columns=feature_columns,
@@ -453,10 +456,10 @@ class Pipeline:
         psms = self.read_input()
         psms = self._generate_features(psms)
         pin_path = os.path.join(self.output_dir, f"optimhc.{self.experiment}.pin")
-        from optimhc.rescore import mokapot as mokapot_adapter
+        from optimhc.rescore import mokapot
         from optimhc.visualization import visualize_feature_correlation
 
-        mokapot_adapter.write_pin(psms, pin_path)
+        mokapot.write_pin(psms, pin_path)
         fig_summary_dir = os.path.join(self.output_dir, "figures")
         os.makedirs(fig_summary_dir, exist_ok=True)
         visualize_feature_correlation(
