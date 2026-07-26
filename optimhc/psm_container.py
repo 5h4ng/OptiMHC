@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
-
 import numpy as np
 import pandas as pd
 
@@ -22,16 +20,21 @@ REQUIRED_COLUMNS = (
 
 
 class PsmContainer:
-    """A small mutable wrapper around the OptiMHC PSM DataFrame."""
+    """Store PSM rows and the columns used for rescoring.
+
+    The DataFrame is stored by reference and must contain ``REQUIRED_COLUMNS``.
+    """
 
     def __init__(
         self,
         df: pd.DataFrame,
-        feature_columns: Iterable[str] = (),
+        feature_columns: list[str] | tuple[str, ...] = (),
     ) -> None:
         self.df = df
-        declared = tuple(feature_columns)
-        self.feature_columns = declared if "rank" in declared else (*declared, "rank")
+        feature_names = tuple(feature_columns)
+        self.feature_columns = (
+            feature_names if "rank" in feature_names else (*feature_names, "rank")
+        )
         self._validate()
 
     def _validate(self) -> None:
@@ -67,9 +70,13 @@ class PsmContainer:
         return len(self.df)
 
     def __repr__(self) -> str:
+        n_target = int((~self.df["is_decoy"]).sum())
+        n_decoy = int(self.df["is_decoy"].sum())
+        n_spectra = self.df[["run", "scan"]].drop_duplicates().shape[0]
+        n_runs = self.df["run"].nunique()
         return (
-            f"PsmContainer({len(self)} candidates, "
-            f"{self.df[['run', 'scan']].drop_duplicates().shape[0]} spectra, "
+            f"PsmContainer({len(self)} PSMs ({n_target} target, {n_decoy} decoy), "
+            f"{n_spectra} spectra, {n_runs} run(s), "
             f"{len(self.feature_columns)} features)"
         )
 
@@ -77,10 +84,15 @@ class PsmContainer:
         self,
         features: pd.DataFrame,
         *,
-        on: str | Sequence[str],
-        columns: Sequence[str],
+        on: str | list[str] | tuple[str, ...],
+        columns: list[str] | tuple[str, ...],
     ) -> None:
-        """Attach explicitly declared numeric features using PSM join keys."""
+        """Add numeric feature columns by matching the specified key columns.
+
+        The feature keys must be unique and cover every PSM key. New column
+        names must not already exist, and all feature values must be finite
+        numbers.
+        """
         keys = [on] if isinstance(on, str) else list(on)
         new_columns = list(columns)
 
@@ -108,21 +120,21 @@ class PsmContainer:
         if not key_coverage["_merge"].eq("both").all():
             raise ValueError("Feature keys must exactly cover the PSM keys.")
 
-        numeric = features[new_columns].apply(pd.to_numeric, errors="raise")
-        if not np.isfinite(numeric.to_numpy(dtype=float)).all():
+        numeric_values = features[new_columns].apply(pd.to_numeric, errors="raise")
+        if not np.isfinite(numeric_values.to_numpy(dtype=float)).all():
             raise ValueError("Feature columns must contain only finite numeric values.")
 
-        normalized = features[[*keys, *new_columns]].copy()
-        normalized[new_columns] = numeric
-        merged = self.df[keys].merge(
-            normalized,
+        feature_df = features[[*keys, *new_columns]].copy()
+        feature_df[new_columns] = numeric_values
+        matched_features = self.df[keys].merge(
+            feature_df,
             how="left",
             on=keys,
             sort=False,
-            validate="many_to_one",
+            validate="many_to_one", 
         )
         for column in new_columns:
-            self.df[column] = merged[column].to_numpy()
+            self.df[column] = matched_features[column].to_numpy()
         self.feature_columns = (*self.feature_columns, *new_columns)
 
 
