@@ -1,7 +1,6 @@
 import gc
 import importlib
 import logging
-from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 import pandas as pd
@@ -25,30 +24,34 @@ _GENERATOR_MODULES = {
 
 @dataclass(frozen=True)
 class FeatureGenerationResult:
-    """Run-local feature groups plus optional raw predictor outputs."""
+    """Feature column groups and saved prediction tables."""
 
     feature_groups: dict[str, tuple[str, ...]]
     raw_predictions: dict[str, pd.DataFrame]
 
 
 def select_feature_groups(
-    feature_groups: Mapping[str, Sequence[str]],
-    sources: Sequence[str],
+    feature_groups: dict[str, tuple[str, ...]],
+    sources: list[str] | tuple[str, ...],
 ) -> tuple[str, ...]:
-    """Resolve legacy experiment source names to explicit feature columns."""
+    """Return the feature columns listed by the configured source names.
+
+    Every source name must exist in ``feature_groups``. Duplicate feature
+    columns are returned once, in source order.
+    """
     unknown = [source for source in sources if source not in feature_groups]
     if unknown:
         available = ", ".join(feature_groups)
         raise ValueError(f"Unknown feature source(s): {unknown}. Available sources: {available}")
 
-    selected = []
-    seen = set()
+    selected_columns = []
+    seen_columns = set()
     for source in sources:
         for column in feature_groups[source]:
-            if column not in seen:
-                selected.append(column)
-                seen.add(column)
-    return tuple(selected)
+            if column not in seen_columns:
+                selected_columns.append(column)
+                seen_columns.add(column)
+    return tuple(selected_columns)
 
 
 def generate_features(psms, config):
@@ -67,6 +70,10 @@ def generate_features(psms, config):
     FeatureGenerationResult
         Generator-to-column groups for experiment selection and optional raw
         binding predictions for intermediate output.
+
+    Each configured generator name must be registered. After ``apply()``, the
+    columns added to ``psms`` must exactly match the generator's declared groups,
+    and every group name must be unique in this run.
     """
     feature_generators = config.get("featureGenerator", None)
     feature_groups = {"Original": tuple(psms.feature_columns)}
@@ -99,9 +106,10 @@ def generate_features(psms, config):
             column for column in psms.feature_columns if column not in previous_columns
         )
         declared_groups = generator.feature_groups(name)
-        declared_columns = tuple(
-            column for columns in declared_groups.values() for column in columns
-        )
+        declared_column_list = []
+        for columns in declared_groups.values():
+            declared_column_list.extend(columns)
+        declared_columns = tuple(declared_column_list)
         if set(generated_columns) != set(declared_columns):
             raise ValueError(
                 f"Generator '{name}' added {generated_columns}, but declared {declared_columns}."
