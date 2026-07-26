@@ -1,4 +1,4 @@
-"""Optional output adapters."""
+"""Write optional output files."""
 
 from optimhc.output.flashlfq import format_flashlfq, write_flashlfq
 

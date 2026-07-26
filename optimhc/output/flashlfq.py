@@ -1,4 +1,4 @@
-"""FlashLFQ output adapter for OptiMHC PSMs and Mokapot results."""
+"""Write FlashLFQ input from OptiMHC PSMs and Mokapot results."""
 
 from __future__ import annotations
 
@@ -33,16 +33,20 @@ def write_flashlfq(
     *,
     fdr: float,
 ) -> Path:
-    """Write accepted Mokapot peptides in FlashLFQ's tabular format."""
+    """Write peptides passing ``fdr`` in FlashLFQ's tabular format.
+
+    PSM retention times must be in seconds. Results must contain a Mokapot
+    peptide table with ``SpecId``, ``Peptide``, and ``mokapot q-value``.
+    """
     tables = [
         format_flashlfq(psms, confidence.peptides, fdr=fdr)
         for confidence in _confidence_results(results)
     ]
-    output = pd.concat(tables, ignore_index=True) if tables else _empty_output()
+    flashlfq_df = pd.concat(tables, ignore_index=True) if tables else _empty_output()
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output.to_csv(output_path, sep="\t", index=False)
-    logger.info("FlashLFQ output saved to %s (%d peptides).", output_path, len(output))
+    flashlfq_df.to_csv(output_path, sep="\t", index=False)
+    logger.info("FlashLFQ output saved to %s (%d peptides).", output_path, len(flashlfq_df))
     return output_path
 
 
@@ -52,7 +56,12 @@ def format_flashlfq(
     *,
     fdr: float,
 ) -> pd.DataFrame:
-    """Map one Mokapot peptide-confidence table to FlashLFQ columns."""
+    """Convert one Mokapot peptide table to FlashLFQ columns.
+
+    PSM retention times must be in seconds. ``peptide_results`` must contain
+    ``SpecId``, ``Peptide``, and ``mokapot q-value``. Each accepted result must
+    match one PSM by ``SpecId`` and ``Peptide``.
+    """
     if "retention_time" not in psms.df:
         raise ValueError("FlashLFQ export requires PSM column 'retention_time'.")
 
@@ -61,53 +70,54 @@ def format_flashlfq(
     if missing_results:
         raise ValueError(f"Mokapot peptide results are missing columns: {missing_results}")
 
-    frame = psms.df
+    psm_df = psms.df
     full_sequences = [
         to_proforma(sequence, mods, sites)
-        for sequence, mods, sites in zip(frame["sequence"], frame["mods"], frame["mod_sites"])
+        for sequence, mods, sites in zip(psm_df["sequence"], psm_df["mods"], psm_df["mod_sites"])
     ]
-    metadata = pd.DataFrame(
+    psm_details = pd.DataFrame(
         {
             "SpecId": [
                 mokapot_spec_id(run, scan, charge)
-                for run, scan, charge in zip(frame["run"], frame["scan"], frame["charge"])
+                for run, scan, charge in zip(psm_df["run"], psm_df["scan"], psm_df["charge"])
             ],
             "Peptide": full_sequences,
-            "File Name": frame["run"].map(lambda value: Path(str(value)).name),
-            "Base Sequence": frame["sequence"].astype(str),
-            "Peptide Monoisotopic Mass": _calculated_masses(frame),
-            "Scan Retention Time": pd.to_numeric(frame["retention_time"], errors="raise").astype(
+            "File Name": psm_df["run"].map(lambda value: Path(str(value)).name),
+            "Base Sequence": psm_df["sequence"].astype(str),
+            "Peptide Monoisotopic Mass": _calculated_masses(psm_df),
+            "Scan Retention Time": pd.to_numeric(psm_df["retention_time"], errors="raise").astype(
                 float
             )
             / 60,
-            "Precursor Charge": frame["charge"].astype(int),
-            "Protein Accession": frame["proteins"].astype(str),
+            "Precursor Charge": psm_df["charge"].astype(int),
+            "Protein Accession": psm_df["proteins"].astype(str),
         }
     )
     keys = ["SpecId", "Peptide"]
-    metadata = metadata.drop_duplicates()
+    psm_details = psm_details.drop_duplicates()
 
-    accepted = peptide_results.loc[
+    accepted_peptides = peptide_results.loc[
         pd.to_numeric(peptide_results["mokapot q-value"], errors="raise").le(fdr),
         keys,
     ]
-    joined = accepted.merge(
-        metadata,
+    flashlfq_df = accepted_peptides.merge(
+        psm_details,
         on=keys,
         how="left",
         sort=False,
         validate="many_to_one",
         indicator=True,
     )
-    if not joined["_merge"].eq("both").all():
-        missing = joined.loc[joined["_merge"].ne("both"), keys].to_dict("records")
+    if not flashlfq_df["_merge"].eq("both").all():
+        missing = flashlfq_df.loc[flashlfq_df["_merge"].ne("both"), keys].to_dict("records")
         raise ValueError(f"FlashLFQ could not map accepted peptides to OptiMHC PSMs: {missing}")
 
-    joined["Full Sequence"] = joined["Peptide"]
-    return joined.loc[:, FLASHLFQ_COLUMNS]
+    flashlfq_df["Full Sequence"] = flashlfq_df["Peptide"]
+    return flashlfq_df.loc[:, FLASHLFQ_COLUMNS]
 
 
 def _confidence_results(results) -> list:
+    """Return one or more Mokapot results with peptide tables."""
     if hasattr(results, "peptides"):
         return [results]
     try:
@@ -120,6 +130,7 @@ def _confidence_results(results) -> list:
 
 
 def _calculated_masses(frame: pd.DataFrame) -> pd.Series:
+    """Use ``calc_mass`` when present and calculate missing peptide masses."""
     calculated = (
         pd.to_numeric(frame["calc_mass"], errors="raise").astype(float)
         if "calc_mass" in frame
@@ -135,6 +146,7 @@ def _calculated_masses(frame: pd.DataFrame) -> pd.Series:
 
 
 def _peptide_mass(sequence: object, mods: object) -> float:
+    """Calculate peptide mass from a sequence and supported modification names."""
     mass = float(calculate_mass(sequence=str(sequence)))
     if mods:
         masses = _modification_masses()
@@ -150,10 +162,12 @@ def _peptide_mass(sequence: object, mods: object) -> float:
 
 @lru_cache(maxsize=1)
 def _modification_masses() -> dict[str, float]:
+    """Return the mass of each supported modification name."""
     table = Path(__file__).parents[1] / "constants" / "modification.tsv"
     modifications = pd.read_csv(table, sep="\t", usecols=["mod_name", "unimod_mass"])
     return dict(zip(modifications["mod_name"], modifications["unimod_mass"].astype(float)))
 
 
 def _empty_output() -> pd.DataFrame:
+    """Return an empty DataFrame with FlashLFQ columns."""
     return pd.DataFrame(columns=FLASHLFQ_COLUMNS)
