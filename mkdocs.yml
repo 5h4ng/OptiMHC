@@ -93,4 +93,5 @@ nav:
     - Visualization: api/visualization.md
     - CLI: api/cli.md
   - Development:
-    - development/index.md
+    - Setup: development/index.md
+    - TODO: development/todo.md
