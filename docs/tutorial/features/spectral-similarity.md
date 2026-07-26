@@ -25,7 +25,9 @@ Experimental MS2 spectra are extracted from mzML files. Each PSM `run` resolves 
 
 ### Step 2: Theoretical Spectrum Prediction
 
-Peptide sequences (with modifications mapped to UNIMOD notation via `modificationMap`) and charge states are sent to a Koina server, which returns predicted fragment ion m/z values and intensities using the specified deep learning model (e.g., `AlphaPeptDeep_ms2_generic`).
+The parsed peptide sequence, modifications, and charge are converted to ProForma and sent to a
+Koina server. Koina returns predicted fragment ion m/z values and intensities using the selected
+model (for example, `AlphaPeptDeep_ms2_generic`).
 
 ### Step 3: Peak Alignment
 

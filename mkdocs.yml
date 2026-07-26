@@ -74,6 +74,7 @@ nav:
     - Overview: tutorial/index.md
     - Examples: tutorial/examples.md
     - Pipeline Workflow: tutorial/workflow.md
+    - PIN Input: tutorial/pin-format.md
     - Features:
       - Overview: tutorial/features/index.md
       - Original Features: tutorial/features/original.md

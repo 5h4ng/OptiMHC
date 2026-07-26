@@ -58,11 +58,13 @@ The PepXML parser extracts PSMs from the XML structure produced by search engine
 - Protein accessions
 - All search engine scores
 
-The parser preserves every `search_hit`, including its candidate rank, then computes the existing derived search features. See [Original Features](features/original.md) for details.
+The parser preserves every `search_hit`, including its candidate rank, then computes the existing derived search features. Supported modifications are identified using the bundled AlphaBase table before feature generation. See [Original Features](features/original.md) for details.
 
 ### PIN (Percolator Input)
 
-The PIN parser reads one tab-separated Percolator input file per call. Columns that are not recognized metadata are declared directly as rescoring features.
+The PIN parser reads one tab-separated file per call. Numeric columns that are not recognized
+metadata are declared as rescoring features; non-numeric extra columns are skipped with a warning.
+Supported metadata, peptide, charge, and producer formats are listed in [PIN Input](pin-format.md).
 
 ### PsmContainer
 
@@ -83,10 +85,9 @@ The pipeline iterates over the `featureGenerator` list from the configuration. F
 2. Calls `generate_features()`, which returns a DataFrame.
 3. Attaches explicitly named numeric columns with `add_features(..., on=..., columns=...)` using a PSM key such as `psm_id`, `run` plus `scan`, or `sequence`.
 
-After all generators have run, the PsmContainer holds the complete feature matrix. The
-orchestration layer also records a run-local manifest mapping `Original` and each generator
-name to its declared output columns. This grouping is not stored as mutable state in the
-PsmContainer.
+After all generators have run, the PsmContainer holds the complete feature matrix. The pipeline
+also keeps a dictionary from `Original` and each generator name to its output columns. This
+dictionary is not stored in the PsmContainer.
 
 Available generators are documented in detail in the [Features](features/index.md) section:
 
@@ -105,7 +106,7 @@ Available generators are documented in detail in the [Features](features/index.m
 
 Rescoring uses the [mokapot](https://mokapot.readthedocs.io/) framework. The pipeline:
 
-1. **Builds a mokapot dataset** — the same PIN projection is used for in-process rescoring and PIN serialization. Mokapot groups candidates by `filename` (`run`) plus `ScanNr` (`scan`), while rank remains a feature.
+1. **Builds a mokapot dataset** — the same PIN DataFrame is used for in-process rescoring and PIN serialization. Mokapot groups candidates by `filename` (`run`) plus `ScanNr` (`scan`), while rank remains a feature.
 2. **Trains a model** — `mokapot.brew()` performs semi-supervised learning with 3-fold cross-validation:
    - Trains the model on the training fold.
    - Scores PSMs in the test fold.

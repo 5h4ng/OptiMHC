@@ -33,15 +33,11 @@ toFlashLFQ: True
 - `toFlashLFQ` — write peptides accepted at `rescore.testFDR` to a FlashLFQ-compatible table
   (default: `True`).
 
-### Modification Mapping
+### Modification Handling
 
-```yaml
-modificationMap:
-  "147.035385": "UNIMOD:35"  # Oxidation (M)
-  "160.030649": "UNIMOD:4"   # Carbamidomethyl (C)
-```
-
-Maps the **full modified residue mass** (residue + modification, as recorded in PepXML) to a UNIMOD identifier. This is required by generators that need standardized modification notation (e.g., SpectralSimilarity, DeepLC).
+PIN and pepXML readers identify supported modifications using the bundled AlphaBase table.
+DeepLC uses the parsed modification names and sites, while SpectralSimilarity receives ProForma
+peptide strings.
 
 ### Allele Settings
 

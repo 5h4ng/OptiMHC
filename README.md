@@ -52,12 +52,14 @@ The pipeline can be configured by using a YAML file. This file defines the input
 | `logLevel`         | String               | `INFO`                          | Logging level (DEBUG, INFO, WARNING, ERROR). Default is "INFO".                                                                                                                                                                    |
 | `keepIntermediate` | Boolean              | `True`                          | Write supported intermediate results.                                                                                                                                                                                              |
 | `toFlashLFQ`       | Boolean              | `True`                          | Export peptides passing `rescore.testFDR` to `<file_root>.FlashLFQ.txt` for downstream quantification.                                                                                                                            |
-| `modificationMap`  | Dictionary           | `{ '147.035385': 'UNIMOD:35' }` | Maps FULL modified residue masses (amino acid+modification) to their 'UNIMOD' identifiers. These masses can be found in the pepXML parameters section. See https://www.unimod.org/ for details.                                    |
 | `allele`           | List                 | `[HLA-A*02:02]`                 | List of alleles for MHC binding and PWM features. Use names such as `HLA-A*02:02`, `HLA-B*07:02`, or Class II paired names such as `HLA-DPA1*02:01-DPB1*01:01`. PWM additionally requires a matching matrix under `optimhc/PWMs/`. |
 | `featureGenerator` | List of Dictionaries | See table below                 | List of feature generator configurations (each with a `name` and optional `params`).                                                                                                                                               |
 | `rescore`          | Dictionary           | See table below                 | Rescore settings including FDR threshold, model and number of jobs.                                                                                                                                                                |
 
 #### Feature Generator Configurations
+
+PIN and pepXML readers identify supported modifications before feature generation. DeepLC uses
+the parsed modification names and sites, while SpectralSimilarity receives ProForma peptides.
 
 Each feature generator is specified with its `name` and an optional `params` subsection. Some common generators include:
 
@@ -100,12 +102,6 @@ removePreNxtAA: False
 numProcesses: 32
 showProgress: True
 keepIntermediate: True
-# Mapping of FULL modified residue masses (residue+modification) to UNIMOD IDs
-# These masses can be found in pepXML parameters section
-modificationMap:
-  "147.035385": "UNIMOD:35" # Oxidation (M) - full modified residue mass
-  "160.030649": "UNIMOD:4" # Carbamidomethyl (C) - full modified residue mass
-
 # Allele settings
 allele:
   - HLA-A*02:02
