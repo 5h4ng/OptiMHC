@@ -38,19 +38,19 @@ def _candidates():
 
 
 def test_candidates_for_one_spectrum_share_the_mokapot_spectrum_key():
-    projection = to_mokapot_dataframe(_candidates())
+    pin_df = to_mokapot_dataframe(_candidates())
 
-    assert projection["SpecId"].tolist() == [
+    assert pin_df["SpecId"].tolist() == [
         "run_a.10.10.2",
         "run_a.10.10.2",
         "run_b.10.10.2",
     ]
-    assert projection["filename"].tolist() == ["run_a", "run_a", "run_b"]
-    assert projection["ScanNr"].tolist() == [10, 10, 10]
-    assert projection["Label"].tolist() == [1, -1, 1]
-    assert "ret_time" not in projection
-    assert "ExpMass" not in projection
-    assert projection.columns.tolist() == [
+    assert pin_df["filename"].tolist() == ["run_a", "run_a", "run_b"]
+    assert pin_df["ScanNr"].tolist() == [10, 10, 10]
+    assert pin_df["Label"].tolist() == [1, -1, 1]
+    assert "ret_time" not in pin_df
+    assert "ExpMass" not in pin_df
+    assert pin_df.columns.tolist() == [
         "SpecId",
         "Label",
         "ScanNr",
@@ -98,9 +98,9 @@ def test_rescore_passes_explicit_seed_to_mokapot(monkeypatch):
 
 
 def test_rank_cannot_be_removed_from_selected_rescoring_features():
-    projection = to_mokapot_dataframe(_candidates(), feature_columns=("score",))
+    pin_df = to_mokapot_dataframe(_candidates(), feature_columns=("score",))
 
-    assert [column for column in ("score", "rank") if column in projection] == [
+    assert [column for column in ("score", "rank") if column in pin_df] == [
         "score",
         "rank",
     ]
@@ -125,7 +125,7 @@ def test_charge_one_hot_features_prevent_scalar_charge_inference():
     assert mokapot_feature_columns(candidates) == dataset._feature_columns
 
 
-def test_charge_one_hot_projection_round_trips_without_scalar_charge(tmp_path):
+def test_charge_one_hot_round_trips_without_scalar_charge(tmp_path):
     candidates = _candidates()
     candidates.add_features(
         pd.DataFrame({"psm_id": [0, 1, 2], "charge_2": [1.0, 1.0, 1.0]}),
@@ -135,16 +135,16 @@ def test_charge_one_hot_projection_round_trips_without_scalar_charge(tmp_path):
 
     in_memory = convert_to_mokapot_dataset(candidates)
     pin_path = tmp_path / "charge-one-hot.pin"
-    projection = write_pin(candidates, pin_path)
+    pin_df = write_pin(candidates, pin_path)
     serialized = mokapot.read_pin(pin_path)
 
-    assert "Charge" not in projection
+    assert "Charge" not in pin_df
     assert in_memory._feature_columns == serialized._feature_columns
     pd.testing.assert_frame_equal(in_memory.data, serialized.data)
 
 
 @pytest.mark.parametrize("invalid", ["not-numeric", np.inf, np.nan])
-def test_rescoring_boundary_rejects_invalid_declared_features(invalid):
+def test_mokapot_input_rejects_invalid_declared_features(invalid):
     candidates = _candidates()
     candidates.df["score"] = candidates.df["score"].astype(object)
     candidates.df.loc[0, "score"] = invalid
