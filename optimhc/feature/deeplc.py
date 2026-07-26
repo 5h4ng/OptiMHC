@@ -42,8 +42,7 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         Whether to remove flanking previous/next amino acids from peptide sequences.
         Default is True.
     mod_dict : dict, optional
-        Dictionary of modifications to be used for DeepLC. If None, no modifications
-        will be used.
+        Unused compatibility argument.
 
     Notes
     -----
@@ -96,8 +95,7 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
             Whether to remove flanking previous/next amino acids from peptide sequences.
             Default: True.
         mod_dict : dict
-            Dictionary of modifications to be used for DeepLC. If None, no modifications
-            will be used.
+            Unused compatibility argument.
         *args : list
             Additional positional arguments are passed to DeepLC.
         **kwargs : dict

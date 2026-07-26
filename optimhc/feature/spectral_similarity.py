@@ -43,8 +43,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         Whether to remove flanking previous/next amino acids from peptide sequences.
         Default is False.
     mod_dict : dict, optional
-        Mapping used to convert peptide modification annotations for Koina. If None,
-        peptide modification annotations are removed.
+        Literal text replacements applied to peptide strings before prediction.
     url : str
         Koina server URL, default is "koina.wilhelmlab.org:443".
     top_n : int
@@ -829,7 +828,10 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
 
     @staticmethod
     def _resolve_mzml_paths(psms, params):
-        """Resolve per-PSM mzML file paths from config and PsmContainer."""
+        """Return ``<mzmlDir>/<run>.mzML`` for each PSM.
+
+        ``params`` must contain ``mzmlDir`` and each PSM must contain ``run``.
+        """
         import os
 
         mzml_dir = params.get("mzmlDir", None)
