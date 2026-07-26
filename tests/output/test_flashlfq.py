@@ -104,3 +104,29 @@ def test_pipeline_honors_to_flashlfq_config(tmp_path, monkeypatch, enabled, expe
     if calls:
         assert calls[0][1]["fdr"] == 0.01
         assert str(calls[0][0][2]).endswith("optimhc.FlashLFQ.txt")
+
+
+def test_pipeline_rejects_missing_retention_time_before_feature_generation(tmp_path, monkeypatch):
+    input_path = tmp_path / "input.pin"
+    input_path.touch()
+    pipeline = Pipeline(
+        {
+            "inputType": "pin",
+            "inputFile": [str(input_path)],
+            "outputDir": str(tmp_path / "output"),
+            "saveModels": False,
+        }
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "read_input",
+        lambda: _candidates(include_retention_time=False),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "_generate_features",
+        lambda psms: pytest.fail("Feature generation should not run without retention time."),
+    )
+
+    with pytest.raises(ValueError, match="FlashLFQ output requires retention time"):
+        pipeline.run()

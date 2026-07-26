@@ -1,6 +1,8 @@
 """Tests for spectral alignment: exp/pred spectra -> two aligned intensity vectors."""
 
 import numpy as np
+import pandas as pd
+import pytest
 
 from optimhc.feature.spectral_similarity import SpectralSimilarityFeatureGenerator
 
@@ -107,3 +109,24 @@ class TestAlignPipeline:
         features = gen._calculate_similarity_features(top_exp, top_pred)
         assert features["spectral_angle_similarity"] > 0.5
         assert features["predicted_seen_nonzero"] >= 4
+
+
+def test_generate_features_requires_experimental_spectra(monkeypatch):
+    gen = _make_generator()
+    gen.df = pd.DataFrame(
+        {
+            "processed_peptide": ["PEPTIDE"],
+            "charge": [2],
+            "scan": [10],
+            "mz_file_path": ["run.mzML"],
+        }
+    )
+    monkeypatch.setattr(
+        gen,
+        "_predict_theoretical_spectra",
+        lambda processed_peptides, charges: pd.DataFrame(),
+    )
+    monkeypatch.setattr(gen, "_extract_experimental_spectra", pd.DataFrame)
+
+    with pytest.raises(ValueError, match="could not extract experimental spectra"):
+        gen._generate_features()

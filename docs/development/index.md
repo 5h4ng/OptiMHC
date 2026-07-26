@@ -28,7 +28,7 @@ pip install pytest ruff pre-commit
 
 ```bash
 uv run pytest                              # All tests
-uv run pytest tests/test_psm_container.py  # Single file
+uv run pytest tests/test_psm_container_contract.py  # Single file
 uv run pytest tests/ -k "test_config"      # Filter by name
 ```
 
@@ -42,7 +42,8 @@ uv run ruff format .         # Format
 uv run ruff format --check . # Check without modifying
 ```
 
-Configuration: `line-length = 99`, rules `["E", "F", "I"]` (pycodestyle errors, pyflakes, isort). `E501` (line too long) is ignored. Ruff excludes `docs/` and `examples/`.
+Configuration: `line-length = 99`, rules `["E", "F", "I"]` (pycodestyle errors,
+pyflakes, isort). `E501` (line too long) is ignored. Ruff excludes `docs/`.
 
 ## Pre-commit Hooks
 

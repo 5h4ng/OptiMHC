@@ -24,9 +24,10 @@ def plot_feature_importance(
     features = list(feature_columns)
     estimator = models[0].estimator
     if hasattr(estimator, "coef_"):
-        values = np.asarray([model.estimator.coef_.mean(axis=0) for model in models])
-        importance = np.abs(values).mean(axis=0)
-        signs = values.mean(axis=0)
+        coefficient_values = np.asarray([model.estimator.coef_.mean(axis=0) for model in models])
+        values = np.asarray([np.abs(model.estimator.coef_).mean(axis=0) for model in models])
+        importance = values.mean(axis=0)
+        signs = coefficient_values.mean(axis=0)
     elif hasattr(estimator, "feature_importances_"):
         values = np.asarray([model.estimator.feature_importances_ for model in models])
         importance = values.mean(axis=0)

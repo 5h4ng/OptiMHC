@@ -145,6 +145,18 @@ class Pipeline:
             logger.error(f"Failed to read input files: {e}")
             raise
 
+    def _validate_output_requirements(self, psms):
+        """Check that the loaded PSMs contain data required by enabled outputs.
+
+        FlashLFQ output requires retention time. PIN input without a retention-time
+        column is supported only when ``toFlashLFQ`` is disabled.
+        """
+        if self.to_flashlfq and "retention_time" not in psms.df.columns:
+            raise ValueError(
+                "FlashLFQ output requires retention time. "
+                "Set 'toFlashLFQ: false' when the PIN input has no retention-time column."
+            )
+
     def _generate_features(self, psms):
         """
         Generate features for PSMs using the configured feature generators.
@@ -432,6 +444,7 @@ class Pipeline:
         logger.info("Starting analysis pipeline")
 
         psms = self.read_input()
+        self._validate_output_requirements(psms)
         psms = self._generate_features(psms)
         results, models = self.rescore(psms)
         self.save_results(psms, results, models)
@@ -454,6 +467,7 @@ class Pipeline:
         logger.info("Starting experiment mode with multiple feature combinations")
 
         psms = self.read_input()
+        self._validate_output_requirements(psms)
         psms = self._generate_features(psms)
         pin_path = os.path.join(self.output_dir, f"optimhc.{self.experiment}.pin")
         from optimhc.rescore import mokapot

@@ -634,24 +634,28 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
 
         exp_spectra_df = self._extract_experimental_spectra()
 
-        if not exp_spectra_df.empty:
-            psm_df = pd.merge(
-                psm_df,
-                exp_spectra_df,
-                on=["scan", "mz_file_path", "charge"],
-                how="inner",
-                validate="m:1",
-            )
-        else:
-            logger.error(
-                "Could not extract experimental spectral data, cannot continue processing"
-            )
-            return pd.DataFrame()
+        if exp_spectra_df.empty:
+            raise ValueError("SpectralSimilarity could not extract experimental spectra.")
 
+        psm_df = pd.merge(
+            psm_df,
+            exp_spectra_df,
+            on=["scan", "mz_file_path", "charge"],
+            how="inner",
+            validate="m:1",
+        )
         if len(psm_df) != len(self.df):
-            logger.warning("Some PSMs were not found in experimental spectral data")
+            raise ValueError(
+                f"SpectralSimilarity expected {len(self.df)} PSM rows after matching "
+                f"experimental spectra, but found {len(psm_df)}."
+            )
 
         psm_df = pd.merge(psm_df, pred_spectra_df, on=["processed_peptide", "charge"], how="inner")
+        if len(psm_df) != len(self.df):
+            raise ValueError(
+                f"SpectralSimilarity expected {len(self.df)} PSM rows after matching "
+                f"predicted spectra, but found {len(psm_df)}."
+            )
 
         n_rows = len(psm_df)
         logger.info(f"Matching experimental and predicted spectra for {n_rows} PSMs...")

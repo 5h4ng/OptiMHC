@@ -3,6 +3,15 @@
 This page lists planned improvements that are intentionally outside the current
 PSM-container refactor.
 
+## Read retention time from mzML
+
+PIN files do not always provide retention time. When FlashLFQ output is enabled,
+OptiMHC currently requires retention time in the PIN input.
+
+Use mzML as a shared retention-time source so that downstream features and outputs
+do not depend on search-engine-specific PIN columns. The input matching and
+compatibility policy are still to be decided.
+
 ## Fix DeepLC retention-time calibration across runs
 
 The current DeepLC path calibrates all acquisition runs together:
