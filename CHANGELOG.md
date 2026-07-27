@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-07-27
+
 ### Breaking
 
 - Replaced the configurable `PsmContainer` constructor with
@@ -18,7 +20,7 @@
 
 - PIN and pepXML readers now produce the same internal PSM DataFrame schema.
 - PIN readers now ignore unknown non-numeric columns with a warning, recognize `rt` metadata,
-  and convert retention-time columns below 500 from minutes to seconds.
+  and convert retention times from minutes to seconds when the maximum value is below 500.
 - PIN peptide parsing now accepts optional flanks and both Comet/MSFragger and Sage numeric
   terminal-modification syntax.
 - pepXML readers preserve every candidate rank.
