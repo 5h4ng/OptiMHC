@@ -32,8 +32,8 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
     lower_score_is_better : bool, optional
         Whether a lower PSM score denotes a better matching PSM. Default is False.
     calibration_set_size : int or float, optional
-        Amount of best PSMs to use for DeepLC calibration. If this value is lower
-        than the number of available PSMs, all PSMs will be used. Default is 0.15.
+        Fraction or count of the best PSMs used for calibration. ``None``
+        disables calibration. Default is None.
     processes : int, optional
         Number of processes to use in DeepLC. Default is 1.
     model_path : str, optional
@@ -46,8 +46,9 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
 
     Notes
     -----
-    DeepLC retraining is on by default. Add ``deeplc_retrain: False`` as a keyword
-    argument to disable retraining.
+    The current pipeline calibrates all loaded acquisition runs together.
+    Per-run calibration is tracked in
+    [issue #23](https://github.com/5h4ng/OptiMHC/issues/23).
 
     The generated features include:
     - observed_retention_time: Original retention time from the data
@@ -73,9 +74,6 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         """
         Generate DeepLC-based features for rescoring.
 
-        DeepLC retraining is on by default. Add ``deeplc_retrain: False`` as a keyword argument to
-        disable retraining.
-
         Parameters
         ----------
         psms : PsmContainer
@@ -85,8 +83,8 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         lower_score_is_better : bool
             Whether a lower PSM score denotes a better matching PSM. Default: False.
         calibration_set_size : int or float
-            Amount of best PSMs to use for DeepLC calibration. If this value is lower
-            than the number of available PSMs, all PSMs will be used. (default: 0.15)
+            Fraction or count of the best PSMs used for calibration. ``None``
+            disables calibration. Default: None.
         processes : int or None
             Number of processes to use in DeepLC. Defaults to 1.
         model_path : str

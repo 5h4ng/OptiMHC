@@ -1,74 +1,44 @@
 # Examples
 
-This page provides configuration templates that you can copy into local YAML files and adapt to your data. It explains each section of Class I, Class II, and experiment-mode configurations.
+These templates enable the full feature set for HLA-I or HLA-II. Copy one into
+a YAML file, replace the input paths and alleles, and check the external tool
+requirements before running it.
 
-## MHC Class I Example
+Default values are omitted unless they make the template easier to understand.
+See the [Configuration Reference](../getting-started/configuration.md) for all
+settings and defaults.
 
-This configuration demonstrates a full Class I immunopeptidomics rescoring workflow with all available features.
+## HLA-I full model
 
 ```yaml
-experimentName: classI_example
+experimentName: hla_i_full_model
 inputType: pepxml
 inputFile:
-  - /path/to/class_i_search_results.pep.xml
-decoyPrefix: DECOY_
+  - /data/run_01.pep.xml
+  - /data/run_02.pep.xml
 outputDir: ./results
-visualization: True
-numProcesses: 32
-showProgress: True
-keepIntermediate: True
-toFlashLFQ: True
-```
+numProcesses: 36
 
-**General settings:**
-
-- `experimentName` — the output subdirectory name under `outputDir`.
-- `inputType` — the format of your search engine output (`pepxml` or `pin`).
-- `inputFile` — one or more paths to PepXML files.
-- `decoyPrefix` — the prefix used by the search engine to mark decoy protein accessions (default: `DECOY_`).
-- `outputDir` — where results, models, and figures are written.
-- `numProcesses` — number of parallel processes for feature generation.
-- `keepIntermediate` — write supported intermediate results such as the best-prediction `BA.parquet` summary (default: `True`).
-- `toFlashLFQ` — write peptides accepted at `rescore.testFDR` to a FlashLFQ-compatible table
-  (default: `True`).
-
-### Modification Handling
-
-PIN and pepXML readers identify supported modifications using the bundled AlphaBase table.
-DeepLC uses the parsed modification names and sites, while SpectralSimilarity receives ProForma
-peptide strings.
-
-### Allele Settings
-
-```yaml
 allele:
-  - HLA-A*02:02
-```
+  - HLA-A*02:01
+  - HLA-B*07:02
+  - HLA-C*07:02
 
-Specifies the MHC allele(s) for binding prediction tools. Use standard HLA nomenclature in config files.
-
-The same allele list is used by NetMHCpan, NetMHCIIpan, MHCflurry, and PWM when those features are enabled. For Class I, use names such as `HLA-A*02:02` or `HLA-B*07:02`. For Class II, current examples use paired DP/DQ names such as `HLA-DPA1*02:01-DPB1*01:01`. PWM requires a matching local matrix under `optimhc/PWMs/`; see [PWM Score](features/pwm.md#allele-support-and-format).
-
-### Features
-
-```yaml
 featureGenerator:
   - name: Basic
   - name: SpectralSimilarity
     params:
-      mzmlDir: /path/to/mzml
+      mzmlDir: /data/mzml
       model: AlphaPeptDeep_ms2_generic
       collisionEnergy: 28
-      instrument: LUMOS
+      instrument: QE
       tolerance: 20
       numTopPeaks: 36
-      url: 127.0.0.1:8500
-      ssl: false
+      url: koina.wilhelmlab.org:443
   - name: DeepLC
     params:
       calibrationCriteria: expect
-      lowerIsBetter: True
-      calibrationSize: 0.1
+      lowerIsBetter: true
   - name: OverlappingPeptide
     params:
       minOverlapLength: 7
@@ -80,107 +50,95 @@ featureGenerator:
       class: I
   - name: MHCflurry
   - name: NetMHCpan
-```
 
-Each entry in `featureGenerator` specifies a feature `name` and optional `params`. Features without `params` use their defaults. See the [Features](features/index.md) section for detailed documentation of each feature.
-
-### Rescoring Settings
-
-```yaml
 rescore:
-  testFDR: 0.01
   model: Percolator
-  numJobs: 4
 ```
 
-- `testFDR` — the FDR threshold for the test set (default: 0.01).
-- `model` — the rescoring model: `Percolator` (linear SVM), `XGBoost`, or `RandomForest`.
-- `numJobs` — number of parallel jobs for cross-validation in XGBoost/RandomForest models.
+This writes results to `./results/hla_i_full_model/`. `MHCflurry` is installed
+with OptiMHC. `NetMHCpan` must be installed separately and available on `PATH`.
 
----
-
-## MHC Class II Example
-
-This configuration mirrors the Class I example but is adapted for MHC Class II immunopeptidomics.
+## HLA-II full model
 
 ```yaml
-experimentName: classII_example
+experimentName: hla_ii_full_model
 inputType: pepxml
 inputFile:
-  - /path/to/class_ii_search_results.pep.xml
-decoyPrefix: DECOY_
+  - /data/run_01.pep.xml
+  - /data/run_02.pep.xml
 outputDir: ./results
-```
+numProcesses: 36
 
-### Key Differences from Class I
-
-**Allele notation** uses the Class II alpha-beta chain format:
-
-```yaml
 allele:
+  - DRB1*15:01
   - HLA-DPA1*02:01-DPB1*01:01
+  - HLA-DQA1*05:01-DQB1*02:01
+
+featureGenerator:
+  - name: Basic
+  - name: SpectralSimilarity
+    params:
+      mzmlDir: /data/mzml
+      model: AlphaPeptDeep_ms2_generic
+      collisionEnergy: 28
+      instrument: QE
+      tolerance: 20
+      numTopPeaks: 36
+      url: koina.wilhelmlab.org:443
+  - name: DeepLC
+    params:
+      calibrationCriteria: expect
+      lowerIsBetter: true
+  - name: OverlappingPeptide
+    params:
+      minOverlapLength: 8
+      minLength: 9
+      maxLength: 50
+      overlappingScore: expect
+  - name: PWM
+    params:
+      class: II
+  - name: NetMHCIIpan
+
+rescore:
+  model: Percolator
 ```
 
-**OverlappingPeptide** parameters are adjusted for the longer peptide lengths typical of Class II:
+This writes results to `./results/hla_ii_full_model/`. `NetMHCIIpan` must be
+installed separately and available on `PATH`.
 
-```yaml
-- name: OverlappingPeptide
-  params:
-    minOverlapLength: 8
-    minLength: 9
-    maxLength: 50
-```
+## Before running a full model
 
-**PWM** is set to Class II mode, which uses a sliding 9-mer core window with N- and C-flank scoring:
+- Replace both `inputFile` paths and `mzmlDir`.
+- Confirm that each PSM run maps to `<mzmlDir>/<run>.mzML`.
+- Confirm that `expect` exists and lower values are better.
+- Use alleles supported by every configured predictor and by the bundled PWM files.
+- Add `params.executablePath` if NetMHCpan or NetMHCIIpan is not on `PATH`.
 
-```yaml
-- name: PWM
-  params:
-    class: II
-```
+`SpectralSimilarity` sends prediction inputs to the configured Koina server.
+The templates use the public endpoint with SSL. Use a self-hosted endpoint when
+the prediction inputs must remain local.
 
-**NetMHCIIpan** replaces MHCflurry and NetMHCpan (which are Class I only):
+## Experiment mode
 
-```yaml
-- name: NetMHCIIpan
-```
-
----
-
-## Experiment Mode Example
-
-Experiment mode runs multiple rescoring experiments with different feature subsets on the same input data, allowing you to compare the contribution of individual features.
-
-The general settings and features are defined once at the top. The `experiments` section then defines each experiment:
+Experiment mode compares feature subsets on the same input data. General
+settings and generators remain at the top level. The `experiments` list selects
+the feature groups and model for each run.
 
 ```yaml
 experiments:
-  - name: "Baseline"
-    source: ["Original"]
-    model: "Percolator"
-  - name: "Complete"
-    source: ["Original", "OverlappingPeptide", "ContigFeatures", "PWM", "Basic"]
-    model: "Percolator"
-  - name: "Shuffle"
-    source: ["Original", "Basic", "OverlappingPeptide", "ContigFeatures", "PWM"]
-    model: "Percolator"
+  - name: Baseline
+    source: [Original]
+    model: Percolator
+  - name: Complete
+    source: [Original, Basic, OverlappingPeptide, ContigFeatures, PWM]
+    model: Percolator
 ```
-
-Each experiment specifies:
-
-- `name` — a label for the experiment, used for output subdirectories.
-- `source` — complete feature categories. `Original` contains reader-provided search features;
-  each configured generator contributes a category with the same name.
-- `features` — optional advanced alternative for selecting exact DataFrame columns. Do not use
-  `source` and `features` in the same experiment.
-- `model` — the rescoring model to use for this experiment.
-
-Save the completed configuration as a local YAML file, then run experiment mode with:
 
 ```bash
 optimhc experiment --config experiment_example.yaml
 ```
 
 !!! tip
-    Prefer `source` for stable experiment YAML. Generator implementations may add or rename
-    columns without requiring the YAML to enumerate every output feature.
+    Prefer `source` when selecting complete feature groups. Use `features` only
+    when an experiment needs exact DataFrame columns. Do not set both.

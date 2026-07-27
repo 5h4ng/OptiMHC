@@ -78,10 +78,8 @@ A value of 0 means the peptide spans the entire contig; larger values indicate t
 
 ### Missing Values
 
-Peptides that were filtered out (Step 1) receive imputed values. The `fill_missing` parameter controls the strategy:
-
-- `"median"` (default) — fill with the median of each feature column.
-- `"zero"` — fill with zeros.
+Peptides filtered out in Step 1 receive the median value of each generated
+feature. This behavior is fixed when the generator is configured through YAML.
 
 ## Configuration
 
@@ -92,17 +90,15 @@ featureGenerator:
       minOverlapLength: 7      # Minimum suffix-prefix overlap to form an edge
       minLength: 7             # Minimum peptide length to include
       maxLength: 20            # Maximum peptide length to include
-      minEntropy: 0            # Minimum Shannon entropy to include
       overlappingScore: expect # Search engine score column (for internal ranking)
 ```
 
 | Parameter | Default | Description |
 |---|---|---|
-| `minOverlapLength` | `6` | Minimum overlap length for edge creation |
-| `minLength` | `7` | Minimum peptide length to include in the graph |
-| `maxLength` | `60` | Maximum peptide length to include |
-| `minEntropy` | `0` | Minimum Shannon entropy threshold |
-| `fill_missing` | `"median"` | Strategy for filling missing values: `"median"` or `"zero"` |
+| `minOverlapLength` | `8` | Minimum overlap length for edge creation |
+| `minLength` | `8` | Minimum peptide length to include in the graph |
+| `maxLength` | `25` | Maximum peptide length to include |
+| `overlappingScore` | Not set | Search score used to create contig-level aggregate features |
 
 !!! tip
     For MHC Class I, typical settings are `minLength: 7`, `maxLength: 20`, `minOverlapLength: 7`. For MHC Class II, use wider ranges like `minLength: 9`, `maxLength: 50`, `minOverlapLength: 8` to accommodate longer peptides.

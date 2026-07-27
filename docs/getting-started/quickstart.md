@@ -29,7 +29,6 @@ featureGenerator:
       class: I
 
 rescore:
-  testFDR: 0.01
   model: Percolator
 ```
 

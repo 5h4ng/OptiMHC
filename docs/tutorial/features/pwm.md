@@ -20,7 +20,7 @@ Use standard HLA names in the top-level `allele` config. OptiMHC maps them to th
 |---|---|---|---|
 | Class I | `HLA-A*02:02` | `HLA-A02_02` | `HLA-A*02:02`, `HLA-B*07:02` |
 | Class II DP/DQ | `HLA-DPA1*02:01-DPB1*01:01` | `HLA-DPA10201-DPB10101` | `HLA-DPA1*02:01-DPB1*01:01`, `HLA-DQA1*05:01-DQB1*02:01` |
-| Class II DR | `DRB1_0101` | `DRB1_0101` | `DRB1_0101` |
+| Class II DR | `DRB1*01:01` | `DRB1_0101` | `DRB1*01:01`, `DRB1*15:01` |
 
 To check all available PWM alleles, list the matrix directories:
 
@@ -116,12 +116,11 @@ featureGenerator:
   - name: PWM
     params:
       class: I           # "I" or "II"
-      anchors: 2         # Number of anchor positions (Class I only)
 ```
 
 | Parameter | Default | Description |
 |---|---|---|
-| `class` | *(required)* | MHC class: `"I"` or `"II"` |
-| `anchors` | `2` | Number of anchor positions for anchor score computation (Class I only) |
+| `class` | `I` | MHC class: `"I"` or `"II"` |
 
-The alleles are taken from the top-level `allele` configuration.
+The alleles are taken from the top-level `allele` configuration. Class I
+scoring uses two anchor positions.

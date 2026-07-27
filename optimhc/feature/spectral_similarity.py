@@ -36,9 +36,14 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
     mz_file_paths : list of str
         List of mzML file paths.
     model_type : str
-        Prediction model type, either "HCD" or "CID".
-    collision_energies : list of float
-        List of collision energies, required when model_type is "HCD".
+        Koina prediction model name, for example
+        ``AlphaPeptDeep_ms2_generic``.
+    collision_energies : list of float, optional
+        Collision energy for each PSM when required by the selected model.
+    instruments : list of str, optional
+        Instrument type for each PSM when required by the selected model.
+    fragmentation_types : list of str, optional
+        Fragmentation type for each PSM when required by the selected model.
     remove_pre_nxt_aa : bool
         Whether to remove flanking previous/next amino acids from peptide sequences.
         Default is False.
@@ -46,8 +51,10 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         Literal text replacements applied to peptide strings before prediction.
     url : str
         Koina server URL, default is "koina.wilhelmlab.org:443".
+    ssl : bool
+        Whether to use SSL for the Koina connection. Default is True.
     top_n : int
-        Number of top peaks to use for alignment, default is 12.
+        Number of top peaks to use for alignment, default is 36.
     tolerance_ppm : float
         Mass tolerance for alignment in ppm, default is 20.
     """

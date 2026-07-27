@@ -14,6 +14,8 @@ compatibility policy are still to be decided.
 
 ## Fix DeepLC retention-time calibration across runs
 
+Tracked in
+[issue #23](https://github.com/5h4ng/OptiMHC/issues/23).
 The current DeepLC path calibrates all acquisition runs together:
 
 - [DeepLC input preparation](https://github.com/5h4ng/OptiMHC/blob/main/optimhc/feature/deeplc.py#L194-L208)

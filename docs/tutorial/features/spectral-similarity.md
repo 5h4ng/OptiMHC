@@ -136,17 +136,21 @@ featureGenerator:
   - name: SpectralSimilarity
     params:
       mzmlDir: ../data               # Directory containing mzML files
-      model: AlphaPeptDeep_ms2_generic          # Koina prediction model
+      model: AlphaPeptDeep_ms2_generic # Koina prediction model
       collisionEnergy: 28            # Collision energy for prediction
-      instrument: LUMOS              # Instrument type for prediction
+      instrument: QE                 # Instrument type for prediction
       tolerance: 20                  # Peak matching tolerance in ppm
       numTopPeaks: 36                # Number of top peaks to compare
       url: koina.wilhelmlab.org:443  # Koina server gRPC endpoint
-      ssl: true                      # Use SSL for gRPC connection
 ```
 
 !!! note
-    For a local Koina/Triton server, set `url: 127.0.0.1:8500` and `ssl: false`. The default public endpoint is `koina.wilhelmlab.org:443` with SSL enabled.
+    The public endpoint uses SSL by default. For a local Koina/Triton server,
+    set `url: 127.0.0.1:8500` and `ssl: false`.
+
+!!! warning "Remote prediction"
+    This feature sends peptide prediction inputs to the configured Koina
+    server. Use a self-hosted endpoint when those inputs must remain local.
 
 ## Requirements
 

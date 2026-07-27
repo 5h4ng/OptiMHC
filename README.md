@@ -35,7 +35,6 @@ featureGenerator:
   - name: Basic
 
 rescore:
-  testFDR: 0.01
   model: Percolator
 ```
 

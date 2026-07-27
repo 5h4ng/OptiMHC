@@ -8,7 +8,9 @@ Alleles are provided once in the top-level `allele` field and reused by binding 
 
 ```yaml
 allele:
-  - HLA-A*02:02
+  - HLA-A*02:01
+  - HLA-B*07:02
+  - HLA-C*07:02
 ```
 
 Use standard HLA names for NetMHCpan, NetMHCIIpan, and MHCflurry. Examples:
@@ -16,7 +18,8 @@ Use standard HLA names for NetMHCpan, NetMHCIIpan, and MHCflurry. Examples:
 | MHC class      | Example allele names                                       |
 | -------------- | ---------------------------------------------------------- |
 | Class I        | `HLA-A*02:01`, `HLA-A*02:02`, `HLA-B*07:02`, `HLA-C*07:02` |
-| Class II DP/DQ | `HLA-DPA1*02:01-DPB1*01:01`, `HLA-DQA1*05:01-DQB1*02:01`   |
+| Class II DR    | `DRB1*15:01`                                                |
+| Class II DP/DQ | `HLA-DPA1*02:01-DPB1*01:01`, `HLA-DQA1*05:01-DQB1*02:01`  |
 
 NetMHCpan, NetMHCIIpan, and MHCflurry validate supported alleles through their own model packages or executables. PWM support is limited to alleles with matrices in `optimhc/PWMs/`; OptiMHC maps standard config names to PWM directory names internally. See [PWM Score](pwm.md#allele-support-and-format).
 

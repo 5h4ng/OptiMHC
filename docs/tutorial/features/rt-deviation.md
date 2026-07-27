@@ -25,7 +25,11 @@ Peptide sequences are preprocessed for DeepLC input:
 
 ### Step 2: Calibration
 
-DeepLC benefits from calibration on high-confidence PSMs from the same LC-MS run. The calibration procedure:
+OptiMHC calibrates DeepLC with high-confidence PSMs from the full loaded
+dataset. In a multi-file analysis, PSMs from all files are calibrated together.
+Per-run calibration is planned in
+[issue #23](https://github.com/5h4ng/OptiMHC/issues/23). The current calibration
+procedure is:
 
 1. **Sort** all PSMs by the `calibrationCriteria` column (a search engine score). If `lowerIsBetter` is true, sort ascending; otherwise, sort descending.
 2. **Select** the top PSMs as the calibration set:
@@ -76,5 +80,5 @@ featureGenerator:
 | Parameter | Default | Description |
 |---|---|---|
 | `calibrationCriteria` | *(required)* | Name of a search engine score column to rank PSMs for calibration |
-| `lowerIsBetter` | `false` | Set to `true` if lower values of the calibration criteria indicate better PSMs (e.g., E-values) |
-| `calibrationSize` | `0.15` | Fraction of PSMs (float) or absolute count (int) for the calibration set |
+| `lowerIsBetter` | *(required)* | Set to `true` if lower values of the calibration criteria indicate better PSMs (e.g., E-values) |
+| `calibrationSize` | `0.1` | Fraction of PSMs (float) or absolute count (int) for the calibration set |
