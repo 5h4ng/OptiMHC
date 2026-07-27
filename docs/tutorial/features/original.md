@@ -1,6 +1,9 @@
 # Original Features
 
-Original features are the initial set of scores and derived quantities extracted during input parsing. They form the baseline feature set (source name: `"Original"`) that every rescoring run includes. The specific features depend on the input format.
+Original features are the initial scores and derived quantities declared by an input reader.
+They are ordinary PSM DataFrame columns listed in `psms.feature_columns`. Experiment mode
+exposes them as the `Original` entry in its run-local feature manifest; the PsmContainer itself
+does not maintain a source registry. The exact columns depend on the input format.
 
 ## PepXML Features
 
@@ -87,23 +90,28 @@ A PSM is labeled as a **decoy** if the first protein accession starts with the `
 
 ### Additional Metadata
 
-The following columns are extracted but treated as metadata (not used as rescoring features):
+The reader also stores these PSM fields. Only `rank` is used as a rescoring feature:
 
-- `ms_data_file` — raw file identifier
+- `run` — acquisition run / raw-file identifier
 - `scan` — scan number
-- `spectrum` — spectrum ID string
-- `label` — target/decoy label
+- `rank` — candidate rank and rescoring feature
+- `is_decoy` — Boolean target/decoy state
 - `calc_mass` — calculated neutral mass
-- `peptide` — peptide sequence (with modifications)
+- `sequence`, `mods`, `mod_sites` — normalized peptidoform fields
 - `proteins` — protein accessions
-- `charge` — precursor charge (kept as metadata; one-hot columns are the features)
-- `retention_time` — retention time in seconds
+- `charge` — internal precursor charge metadata; input charge columns remain features
+- `retention_time` — seconds for pepXML; PIN values are multiplied by 60 when the column maximum is below 500
 
 ---
 
 ## PIN Features
 
-When parsing PIN (Percolator Input) files, the feature set is determined by the file itself. All columns that are not recognized as metadata (`Label`, `ScanNr`, `SpecId`, `Peptide`, `Proteins`, `rank`, `Charge`) are treated as **"Original"** rescoring features.
+When parsing PIN files, the feature set is determined by the file itself. Columns not recognized
+as metadata are retained as rescoring features when all their values are numeric. Non-numeric
+extra columns are skipped with a warning. Rank is preserved from a rank column when present,
+otherwise parsed from a trailing `_<rank>` in `SpecId`, and synthesized as `1` only when neither
+representation is available. See [PIN Input](../pin-format.md) for the supported metadata,
+peptide, and charge formats.
 
 Column name matching is case-insensitive. Charge columns matching the pattern `charge[_]?\d+` (e.g., `charge1`, `charge_2`) are detected automatically. For each PSM, the charge value is determined by which charge column contains a value of 1.
 

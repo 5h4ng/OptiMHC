@@ -133,3 +133,53 @@ class TestDefaultConfig:
         assert DEFAULT_CONFIG["numProcesses"] == 4
         assert DEFAULT_CONFIG["rescore"]["testFDR"] == 0.01
         assert DEFAULT_CONFIG["rescore"]["model"] == "Percolator"
+        assert DEFAULT_CONFIG["toFlashLFQ"] is True
+
+    def test_experiments_use_explicit_feature_names(self, tmp_path):
+        input_path = tmp_path / "input.pin"
+        input_path.touch()
+        config = Config(
+            {
+                "inputType": "pin",
+                "inputFile": [str(input_path)],
+                "outputDir": str(tmp_path / "output"),
+                "experiments": [{"name": "rank_only", "features": ["rank"]}],
+            }
+        )
+
+        config.validate()
+
+    def test_experiment_source_groups_remain_backward_compatible(self, tmp_path):
+        input_path = tmp_path / "input.pin"
+        input_path.touch()
+        config = Config(
+            {
+                "inputType": "pin",
+                "inputFile": [str(input_path)],
+                "outputDir": str(tmp_path / "output"),
+                "experiments": [{"name": "legacy", "source": ["Original"]}],
+            }
+        )
+
+        config.validate()
+
+    def test_experiment_cannot_mix_source_groups_and_explicit_features(self, tmp_path):
+        input_path = tmp_path / "input.pin"
+        input_path.touch()
+        config = Config(
+            {
+                "inputType": "pin",
+                "inputFile": [str(input_path)],
+                "outputDir": str(tmp_path / "output"),
+                "experiments": [
+                    {
+                        "name": "ambiguous",
+                        "source": ["Original"],
+                        "features": ["rank"],
+                    }
+                ],
+            }
+        )
+
+        with pytest.raises(ValueError, match="either 'source' or 'features'"):
+            config.validate()

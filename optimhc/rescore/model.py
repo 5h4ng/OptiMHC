@@ -50,6 +50,7 @@ class PercolatorModel(mokapot_model.PercolatorModel, MokapotModelWrapper):
         return cls(
             train_fdr=rescore_cfg.get("trainFDR", 0.01),
             n_jobs=rescore_cfg.get("numJobs", 1),
+            rng=rescore_cfg.get("seed", 1),
         )
 
 
@@ -91,6 +92,7 @@ class XGBoostModel(MokapotModelWrapper):
         return cls(
             train_fdr=rescore_cfg.get("trainFDR", 0.01),
             n_jobs=rescore_cfg.get("numJobs", 1),
+            rng=rescore_cfg.get("seed", 1),
         )
 
 
@@ -132,6 +134,7 @@ class RandomForestModel(MokapotModelWrapper):
         return cls(
             train_fdr=rescore_cfg.get("trainFDR", 0.01),
             n_jobs=rescore_cfg.get("numJobs", 1),
+            rng=rescore_cfg.get("seed", 1),
         )
 
 

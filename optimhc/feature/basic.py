@@ -172,14 +172,15 @@ class BasicFeatureGenerator(BaseFeatureGenerator):
     @classmethod
     def from_config(cls, psms, config, params):
         return cls(
-            peptides=psms.peptides,
+            peptides=psms.df["sequence"].tolist(),
             remove_pre_nxt_aa=config["removePreNxtAA"],
             remove_modification=True,
         )
 
-    def apply(self, psms, source):
+    def apply(self, psms):
         features = self.generate_features()
-        psms.add_features_by_index(features[self.feature_columns], source=source)
+        features.insert(0, "psm_id", psms.df["psm_id"].to_numpy())
+        psms.add_features(features, on="psm_id", columns=self.feature_columns)
 
 
 feature_generator_factory.register_generator("Basic", BasicFeatureGenerator)

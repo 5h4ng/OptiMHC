@@ -1,21 +1,18 @@
 import gc
 import logging
 import os
+import re
 from multiprocessing import Process
 
+import pandas as pd
+
 from optimhc.core.config import Config
-from optimhc.core.feature_generation import generate_features
+from optimhc.core.feature_generation import generate_features, select_feature_groups
 from optimhc.parser import read_pepxml, read_pin
-from optimhc.rescore import mokapot
 from optimhc.rescore.factory import rescore_model_factory
-from optimhc.visualization import (
-    plot_feature_importance,
-    plot_qvalues,
-    visualize_feature_correlation,
-    visualize_target_decoy_features,
-)
 
 logger = logging.getLogger(__name__)
+CHARGE_FEATURE = re.compile(r"^charge_?(\d+)(?:_or_more)?$", re.IGNORECASE)
 
 
 class Pipeline:
@@ -63,6 +60,8 @@ class Pipeline:
         self.train_fdr = self.config.get("rescore", {}).get("trainFDR", 0.01)
         self.model_type = self.config.get("rescore", {}).get("model", "Percolator")
         self.n_jobs = self.config.get("rescore", {}).get("numJobs", 1)
+        self.rng = self.config.get("rescore", {}).get("seed", 1)
+        self.feature_groups = {}
 
     def read_input(self):
         """
@@ -72,6 +71,10 @@ class Pipeline:
         -------
         PsmContainer
             Object containing loaded PSMs.
+
+        All input files must expose the same non-charge feature columns. Charge
+        one-hot columns may differ and are filled with zero where absent. Files
+        are combined in configuration order, then ``psm_id`` is reassigned.
 
         Raises
         ------
@@ -87,18 +90,72 @@ class Pipeline:
 
         try:
             if input_type == "pepxml":
-                psms = read_pepxml(input_files, decoy_prefix=self.config["decoyPrefix"])
+                containers = [
+                    read_pepxml(path, decoy_prefix=self.config["decoyPrefix"])
+                    for path in input_files
+                ]
             elif input_type == "pin":
-                psms = read_pin(
-                    input_files,
-                    retention_time_column=self.config.get("retentionTimeColumn"),
-                )
+                containers = [
+                    read_pin(
+                        path,
+                        retention_time_column=self.config.get("retentionTimeColumn"),
+                    )
+                    for path in input_files
+                ]
             else:
                 raise ValueError(f"Unsupported input type: {input_type}")
-            return psms
+            non_charge_features = tuple(
+                feature
+                for feature in containers[0].feature_columns
+                if CHARGE_FEATURE.fullmatch(feature) is None
+            )
+            for container in containers[1:]:
+                current_features = tuple(
+                    feature
+                    for feature in container.feature_columns
+                    if CHARGE_FEATURE.fullmatch(feature) is None
+                )
+                if current_features != non_charge_features:
+                    raise ValueError("All input files must declare the same rescoring features.")
+
+            charge_feature_set = set()
+            for container in containers:
+                for feature in container.feature_columns:
+                    if CHARGE_FEATURE.fullmatch(feature) is not None:
+                        charge_feature_set.add(feature)
+            charge_features = sorted(
+                charge_feature_set,
+                key=lambda feature: (
+                    int(CHARGE_FEATURE.fullmatch(feature).group(1)),
+                    feature.lower(),
+                ),
+            )
+            feature_columns = (*non_charge_features, *charge_features)
+            frames = []
+            for container in containers:
+                frame = container.df.copy()
+                for feature in charge_features:
+                    if feature not in frame:
+                        frame[feature] = 0.0
+                frames.append(frame)
+            combined = pd.concat(frames, ignore_index=True)
+            combined["psm_id"] = range(len(combined))
+            return type(containers[0])(combined, feature_columns=feature_columns)
         except Exception as e:
             logger.error(f"Failed to read input files: {e}")
             raise
+
+    def _validate_output_requirements(self, psms):
+        """Check that the loaded PSMs contain data required by enabled outputs.
+
+        FlashLFQ output requires retention time. PIN input without a retention-time
+        column is supported only when ``toFlashLFQ`` is disabled.
+        """
+        if self.to_flashlfq and "retention_time" not in psms.df.columns:
+            raise ValueError(
+                "FlashLFQ output requires retention time. "
+                "Set 'toFlashLFQ: false' when the PIN input has no retention-time column."
+            )
 
     def _generate_features(self, psms):
         """
@@ -114,20 +171,22 @@ class Pipeline:
         PsmContainer
             PSM container with generated features.
         """
-        raw_predictions = generate_features(psms, self.config)
-        if self.config.get("keepIntermediate", True) and raw_predictions:
+        generated = generate_features(psms, self.config)
+        self.feature_groups = generated.feature_groups
+        if self.config.get("keepIntermediate", True) and generated.raw_predictions:
             from optimhc.core.feature_generation import _build_ba_parquet
 
             intermediate_results_dir = os.path.join(self.output_dir, "intermediate_results")
             os.makedirs(intermediate_results_dir, exist_ok=True)
             _build_ba_parquet(
-                raw_predictions, os.path.join(intermediate_results_dir, "BA.parquet")
+                generated.raw_predictions,
+                os.path.join(intermediate_results_dir, "BA.parquet"),
             )
         return psms
 
     @staticmethod
-    def _build_model_config(train_fdr, n_jobs):
-        return {"rescore": {"trainFDR": train_fdr, "numJobs": n_jobs}}
+    def _build_model_config(train_fdr, n_jobs, rng):
+        return {"rescore": {"trainFDR": train_fdr, "numJobs": n_jobs, "seed": rng}}
 
     def rescore(self, psms, model_type=None, n_jobs=None, test_fdr=None, rescoring_features=None):
         """
@@ -161,17 +220,36 @@ class Pipeline:
         n_jobs = n_jobs if n_jobs is not None else self.n_jobs
 
         train_fdr = getattr(self, "train_fdr", 0.01)
+        import optimhc.rescore.model  # noqa: F401 -- register configured models lazily
+        from optimhc.rescore import mokapot
+
         model_cls = rescore_model_factory.get_model(model_type)
-        model = model_cls.from_config(self._build_model_config(train_fdr=train_fdr, n_jobs=n_jobs))
+        model = model_cls.from_config(
+            self._build_model_config(train_fdr=train_fdr, n_jobs=n_jobs, rng=self.rng)
+        )
 
         kwargs = {}
         if rescoring_features is not None:
             kwargs["rescoring_features"] = rescoring_features
 
-        results, models = mokapot.rescore(psms, model=model, test_fdr=test_fdr, **kwargs)
+        results, models = mokapot.rescore(
+            psms,
+            model=model,
+            test_fdr=test_fdr,
+            rng=self.rng,
+            **kwargs,
+        )
         return results, models
 
-    def save_results(self, psms, results, models, output_dir=None, file_root="optimhc"):
+    def save_results(
+        self,
+        psms,
+        results,
+        models,
+        output_dir=None,
+        file_root="optimhc",
+        feature_columns=None,
+    ):
         """
         Save rescoring results, PSM data, and trained models to disk.
 
@@ -187,11 +265,18 @@ class Pipeline:
             Output directory.
         file_root : str, optional
             Root name for output files.
+        feature_columns : sequence of str, optional
+            Exact feature subset used for both rescoring and PIN serialization.
         """
         output_dir = output_dir if output_dir is not None else self.output_dir
+        from optimhc.rescore import mokapot
 
         results.to_txt(dest_dir=output_dir, file_root=file_root, decoys=True)
-        psms.write_pin(os.path.join(output_dir, f"{file_root}.pin"))
+        mokapot.write_pin(
+            psms,
+            os.path.join(output_dir, f"{file_root}.pin"),
+            feature_columns=feature_columns,
+        )
 
         if self.save_models:
             model_dir = os.path.join(output_dir, "models")
@@ -201,9 +286,16 @@ class Pipeline:
                 model.save(os.path.join(model_dir, f"{file_root}.model{i}"))
 
         if self.to_flashlfq:
-            mokapot.to_flashLFQ(results, output_dir, file_name=f"{file_root}.FlashLFQ.txt")
+            from optimhc.output.flashlfq import write_flashlfq
 
-    def visualize_results(self, psms, results, models, output_dir=None, sources=None):
+            write_flashlfq(
+                psms,
+                results,
+                os.path.join(output_dir, f"{file_root}.FlashLFQ.txt"),
+                fdr=self.test_fdr,
+            )
+
+    def visualize_results(self, psms, results, models, output_dir=None):
         """
         Generate and save visualizations for the analysis results.
 
@@ -217,12 +309,16 @@ class Pipeline:
             Trained models.
         output_dir : str, optional
             Output directory.
-        sources : list, optional
-            Feature sources to include in visualizations.
         """
         if not self.visualization_enabled:
             logger.info("Visualization is disabled. Skipping...")
             return
+        from optimhc.visualization import (
+            plot_feature_importance,
+            plot_qvalues,
+            visualize_feature_correlation,
+            visualize_target_decoy_features,
+        )
 
         output_dir = output_dir if output_dir is not None else self.output_dir
         fig_dir = os.path.join(output_dir, "figures")
@@ -234,14 +330,11 @@ class Pipeline:
             threshold=0.05,
         )
 
-        if sources:
-            rescoring_features = {k: v for k, v in psms.rescoring_features.items() if k in sources}
-        else:
-            rescoring_features = psms.rescoring_features
+        from optimhc.rescore.mokapot import mokapot_feature_columns
 
         plot_feature_importance(
             models,
-            rescoring_features,
+            mokapot_feature_columns(psms),
             save_path=os.path.join(fig_dir, "feature_importance.png"),
         )
         visualize_feature_correlation(
@@ -277,22 +370,16 @@ class Pipeline:
         results = None
         models = None
         try:
+            from optimhc.visualization import plot_feature_importance, plot_qvalues
+
             os.makedirs(exp_dir, exist_ok=True)
 
-            source = exp_config.get("source", None)
             model_type = exp_config.get("model", self.model_type)
             n_jobs = exp_config.get("numJobs", self.n_jobs)
-
-            logger.info(f"Running experiment '{exp_name}' with sources: {source}")
-
-            # Generate list of features based on the provided sources
-            features = []
-            if source:
-                for s in source:
-                    if s in psms.rescoring_features:
-                        features.extend(psms.rescoring_features.get(s, []))
-                    else:
-                        logger.error(f"Source '{s}' not found in PSM features")
+            if "source" in exp_config:
+                features = select_feature_groups(self.feature_groups, exp_config["source"])
+            else:
+                features = tuple(exp_config.get("features", psms.feature_columns))
             logger.info(f"Features used in experiment '{exp_name}': {features}")
 
             results, models = self.rescore(
@@ -303,7 +390,14 @@ class Pipeline:
                 rescoring_features=features,
             )
 
-            self.save_results(psms, results, models, output_dir=exp_dir, file_root=exp_name)
+            self.save_results(
+                psms,
+                results,
+                models,
+                output_dir=exp_dir,
+                file_root=exp_name,
+                feature_columns=features,
+            )
 
             fig_dir = os.path.join(exp_dir, "figures")
 
@@ -313,11 +407,11 @@ class Pipeline:
                 threshold=0.05,
             )
 
+            from optimhc.rescore.mokapot import mokapot_feature_columns
+
             plot_feature_importance(
                 models,
-                rescoring_features={
-                    k: v for k, v in psms.rescoring_features.items() if k in source
-                },
+                feature_columns=mokapot_feature_columns(psms, features),
                 save_path=os.path.join(fig_dir, "feature_importance.png"),
             )
 
@@ -350,6 +444,7 @@ class Pipeline:
         logger.info("Starting analysis pipeline")
 
         psms = self.read_input()
+        self._validate_output_requirements(psms)
         psms = self._generate_features(psms)
         results, models = self.rescore(psms)
         self.save_results(psms, results, models)
@@ -372,9 +467,13 @@ class Pipeline:
         logger.info("Starting experiment mode with multiple feature combinations")
 
         psms = self.read_input()
+        self._validate_output_requirements(psms)
         psms = self._generate_features(psms)
         pin_path = os.path.join(self.output_dir, f"optimhc.{self.experiment}.pin")
-        psms.write_pin(pin_path)
+        from optimhc.rescore import mokapot
+        from optimhc.visualization import visualize_feature_correlation
+
+        mokapot.write_pin(psms, pin_path)
         fig_summary_dir = os.path.join(self.output_dir, "figures")
         os.makedirs(fig_summary_dir, exist_ok=True)
         visualize_feature_correlation(

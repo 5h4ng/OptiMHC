@@ -20,8 +20,8 @@ The **DeepLC** feature (`name: DeepLC`) predicts peptide retention times using t
 
 Peptide sequences are preprocessed for DeepLC input:
 
-1. **Flanking amino acids** are stripped (e.g., `K.PEPTIDE.R` → `PEPTIDE`).
-2. **Modifications** are converted from mass-annotated format to UNIMOD notation using the `modificationMap`. For example, `M[147.035]` is converted to a UNIMOD-indexed modification string that DeepLC understands.
+1. The reader provides the unmodified amino-acid sequence.
+2. Parsed modification names and sites are converted to the format expected by DeepLC.
 
 ### Step 2: Calibration
 
@@ -78,4 +78,3 @@ featureGenerator:
 | `calibrationCriteria` | *(required)* | Name of a search engine score column to rank PSMs for calibration |
 | `lowerIsBetter` | `false` | Set to `true` if lower values of the calibration criteria indicate better PSMs (e.g., E-values) |
 | `calibrationSize` | `0.15` | Fraction of PSMs (float) or absolute count (int) for the calibration set |
-

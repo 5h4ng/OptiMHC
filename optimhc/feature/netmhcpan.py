@@ -309,7 +309,7 @@ class NetMHCpanFeatureGenerator(BaseFeatureGenerator):
     @classmethod
     def from_config(cls, psms, config, params):
         return cls(
-            peptides=list(set(psms.peptides)),
+            peptides=list(set(psms.df["sequence"])),
             alleles=config.get("allele", []),
             remove_pre_nxt_aa=config["removePreNxtAA"],
             remove_modification=True,

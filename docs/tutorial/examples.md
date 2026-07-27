@@ -18,6 +18,7 @@ removePreNxtAA: False
 numProcesses: 32
 showProgress: True
 keepIntermediate: True
+toFlashLFQ: True
 ```
 
 **General settings:**
@@ -29,16 +30,14 @@ keepIntermediate: True
 - `outputDir` — where results, models, and figures are written.
 - `numProcesses` — number of parallel processes for feature generation.
 - `keepIntermediate` — write supported intermediate results such as the best-prediction `BA.parquet` summary (default: `True`).
+- `toFlashLFQ` — write peptides accepted at `rescore.testFDR` to a FlashLFQ-compatible table
+  (default: `True`).
 
-### Modification Mapping
+### Modification Handling
 
-```yaml
-modificationMap:
-  "147.035385": "UNIMOD:35"  # Oxidation (M)
-  "160.030649": "UNIMOD:4"   # Carbamidomethyl (C)
-```
-
-Maps the **full modified residue mass** (residue + modification, as recorded in PepXML) to a UNIMOD identifier. This is required by generators that need standardized modification notation (e.g., SpectralSimilarity, DeepLC).
+PIN and pepXML readers identify supported modifications using the bundled AlphaBase table.
+DeepLC uses the parsed modification names and sites, while SpectralSimilarity receives ProForma
+peptide strings.
 
 ### Allele Settings
 
@@ -59,7 +58,6 @@ featureGenerator:
   - name: SpectralSimilarity
     params:
       mzmlDir: /path/to/mzml
-      spectrumIdPattern: (.+?)\.\d+\.\d+\.\d+
       model: AlphaPeptDeep_ms2_generic
       collisionEnergy: 28
       instrument: LUMOS
@@ -172,7 +170,10 @@ experiments:
 Each experiment specifies:
 
 - `name` — a label for the experiment, used for output subdirectories.
-- `source` — a list of feature sources to include. These correspond to the source names registered by each feature (e.g., `"Original"` from the parser, `"Basic"` from Basic, etc.).
+- `source` — complete feature categories. `Original` contains reader-provided search features;
+  each configured generator contributes a category with the same name.
+- `features` — optional advanced alternative for selecting exact DataFrame columns. Do not use
+  `source` and `features` in the same experiment.
 - `model` — the rescoring model to use for this experiment.
 
 Save the completed configuration as a local YAML file, then run experiment mode with:
@@ -182,19 +183,5 @@ optimhc experiment --config experiment_example.yaml
 ```
 
 !!! tip
-    Experiment mode is useful for ablation studies — start with `"Original"` as a baseline, then incrementally add feature sources to measure their impact on peptide identification.
-
-### Available Feature Sources
-
-| Source Name | Feature |
-|---|---|
-| `Original` | PepXML / PIN parser (search engine features) |
-| `Basic` | Basic peptide features |
-| `SpectralSimilarity` | Spectral similarity |
-| `DeepLC` | Retention time deviation |
-| `OverlappingPeptide` | Overlapping peptide score |
-| `ContigFeatures` | Contig-level features from overlapping peptide analysis |
-| `PWM` | Position weight matrix score |
-| `MHCflurry` | MHCflurry class I binding affinity prediction |
-| `NetMHCpan` | NetMHCpan class I binding affinity prediction |
-| `NetMHCIIpan` | NetMHCIIpan class II binding affinity prediction |
+    Prefer `source` for stable experiment YAML. Generator implementations may add or rename
+    columns without requiring the YAML to enumerate every output feature.

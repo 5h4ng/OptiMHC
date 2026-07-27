@@ -691,7 +691,7 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
     @classmethod
     def from_config(cls, psms, config, params):
         instance = cls(
-            peptides=list(set(psms.peptides)),
+            peptides=list(set(psms.df["sequence"])),
             min_overlap_length=params.get("minOverlapLength", 8),
             min_length=params.get("minLength", 8),
             max_length=params.get("maxLength", 25),
@@ -701,37 +701,34 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
         instance._overlapping_score = params.get("overlappingScore", None)
         return instance
 
-    def apply(self, psms, source):
+    def apply(self, psms):
         features = self.generate_features()
         full_data = self.get_full_data()
-
-        psms.add_metadata(
-            full_data[["Peptide", "contig_member_count", "ContigSequence"]],
-            psms_key=psms.peptide_column,
-            metadata_key="Peptide",
-            source=source,
-        )
+        features = features.rename(columns={"Peptide": "sequence"})
         psms.add_features(
             features,
-            psms_key=psms.peptide_column,
-            feature_key=self.id_column,
-            source=source,
+            on="sequence",
+            columns=self.feature_columns,
         )
 
         if self._overlapping_score:
             assign_brother_aggregated_feature(
                 psms,
+                full_data=full_data,
                 feature_columns=self._overlapping_score,
-                overlapping_source=source,
-                source_name="ContigFeatures",
             )
+
+    def feature_groups(self, name):
+        groups = super().feature_groups(name)
+        if self._overlapping_score:
+            groups["ContigFeatures"] = tuple(_contig_feature_columns(self._overlapping_score))
+        return groups
 
 
 def assign_brother_aggregated_feature(
     psms: PsmContainer,
+    full_data: pd.DataFrame,
     feature_columns: Union[str, List[str]],
-    overlapping_source: str,
-    source_name: str = "OverlappingGroupFeatures",
 ) -> None:
     """
     Assign aggregated features based on brother peptides to the PSMs.
@@ -744,42 +741,19 @@ def assign_brother_aggregated_feature(
     Parameters:
         psms (PsmContainer): PSM container containing the peptides and features.
         feature_columns (Union[str, List[str]]): Name of the feature column(s) to aggregate.
-        overlapping_source (str): Source name of the overlapping peptide features.
-        source_name (str): Name of the new feature source.
+        full_data (pd.DataFrame): Peptide-to-contig assignments used for aggregation.
 
     Returns:
         None
     """
     if isinstance(feature_columns, str):
         feature_columns = [feature_columns]
-    psms_df = psms.psms
-
-    if psms.metadata_column is None:
-        raise ValueError("The PSMs do not contain metadata.")
-    metadata = psms_df[psms.metadata_column]
-
-    def get_overlapping_data(x):
-        if isinstance(x, dict):
-            return x.get(overlapping_source, {})
-        else:
-            logger.warning(f"Invalid metadata entry: {x}")
-            return {}
-
-    overlapping_data = metadata.apply(get_overlapping_data)
-
-    def get_contig_sequence(x):
-        if isinstance(x, dict):
-            return x.get("ContigSequence", None)
-        else:
-            logger.warning(f"Invalid overlapping data entry: {x}")
-            return None
-
-    contig_sequences = overlapping_data.apply(get_contig_sequence)
-
-    psms_df["ContigSequence"] = contig_sequences
-
-    if "contig_member_count" not in psms_df.columns:
-        raise ValueError("'contig_member_count' column not found in PSMs.")
+    psms_df = psms.df.merge(
+        full_data[["Peptide", "ContigSequence"]].rename(columns={"Peptide": "sequence"}),
+        on="sequence",
+        how="left",
+        validate="many_to_one",
+    )
 
     missing_features = [feature for feature in feature_columns if feature not in psms_df.columns]
     if missing_features:
@@ -805,13 +779,18 @@ def assign_brother_aggregated_feature(
         mean_feature = f"{feature}_contig_avg"
         psms_with_agg[mean_feature].fillna(psms_with_agg[feature], inplace=True)
 
-    agg_feature_columns = [f"{feature}_contig_avg" for feature in feature_columns] + [
+    agg_feature_columns = _contig_feature_columns(feature_columns)
+
+    new_features_df = psms_with_agg[["psm_id", *agg_feature_columns]]
+    psms.add_features(new_features_df, on="psm_id", columns=agg_feature_columns)
+
+
+def _contig_feature_columns(feature_columns: Union[str, List[str]]) -> List[str]:
+    if isinstance(feature_columns, str):
+        feature_columns = [feature_columns]
+    return [f"{feature}_contig_avg" for feature in feature_columns] + [
         f"{feature}_contig_sum" for feature in feature_columns
     ]
-
-    new_features_df = psms_with_agg[agg_feature_columns]
-
-    psms.add_features_by_index(features_df=new_features_df, source=source_name)
 
 
 feature_generator_factory.register_generator(

@@ -21,11 +21,13 @@ The **SpectralSimilarity** feature (`name: SpectralSimilarity`) compares experim
 
 ### Step 1: Spectrum Extraction
 
-Experimental MS2 spectra are extracted from mzML files. Each spectrum is associated with a PSM through the spectrum ID pattern. The m/z and intensity arrays are sorted by m/z.
+Experimental MS2 spectra are extracted from mzML files. Each PSM `run` resolves to `<mzmlDir>/<run>.mzML`, and `scan` selects the spectrum. The m/z and intensity arrays are sorted by m/z.
 
 ### Step 2: Theoretical Spectrum Prediction
 
-Peptide sequences (with modifications mapped to UNIMOD notation via `modificationMap`) and charge states are sent to a Koina server, which returns predicted fragment ion m/z values and intensities using the specified deep learning model (e.g., `AlphaPeptDeep_ms2_generic`).
+The parsed peptide sequence, modifications, and charge are converted to ProForma and sent to a
+Koina server. Koina returns predicted fragment ion m/z values and intensities using the selected
+model (for example, `AlphaPeptDeep_ms2_generic`).
 
 ### Step 3: Peak Alignment
 
@@ -134,7 +136,6 @@ featureGenerator:
   - name: SpectralSimilarity
     params:
       mzmlDir: ../data               # Directory containing mzML files
-      spectrumIdPattern: (.+?)\.\d+\.\d+\.\d+  # Regex to link PSMs to mzML files
       model: AlphaPeptDeep_ms2_generic          # Koina prediction model
       collisionEnergy: 28            # Collision energy for prediction
       instrument: LUMOS              # Instrument type for prediction

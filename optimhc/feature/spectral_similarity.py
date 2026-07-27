@@ -10,6 +10,7 @@ from optimhc.feature.base_feature_generator import BaseFeatureGenerator
 from optimhc.feature.factory import feature_generator_factory
 from optimhc.feature.numba_utils import align_peaks, compute_similarity_features
 from optimhc.parser import extract_mzml_data
+from optimhc.peptidoform import to_proforma
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         Whether to remove flanking previous/next amino acids from peptide sequences.
         Default is False.
     mod_dict : dict, optional
-        Mapping used to convert peptide modification annotations for Koina. If None,
-        peptide modification annotations are removed.
+        Literal text replacements applied to peptide strings before prediction.
     url : str
         Koina server URL, default is "koina.wilhelmlab.org:443".
     top_n : int
@@ -164,9 +164,7 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         if self.remove_pre_nxt_aa:
             processed_peptide = utils.strip_flanking_and_charge(processed_peptide)
 
-        if self.mod_dict is None:
-            processed_peptide = utils.remove_modifications(processed_peptide)
-        else:
+        if self.mod_dict is not None:
             for mod, replacement in self.mod_dict.items():
                 processed_peptide = processed_peptide.replace(mod, replacement)
 
@@ -636,24 +634,28 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
 
         exp_spectra_df = self._extract_experimental_spectra()
 
-        if not exp_spectra_df.empty:
-            psm_df = pd.merge(
-                psm_df,
-                exp_spectra_df,
-                on=["scan", "mz_file_path", "charge"],
-                how="inner",
-                validate="m:1",
-            )
-        else:
-            logger.error(
-                "Could not extract experimental spectral data, cannot continue processing"
-            )
-            return pd.DataFrame()
+        if exp_spectra_df.empty:
+            raise ValueError("SpectralSimilarity could not extract experimental spectra.")
 
+        psm_df = pd.merge(
+            psm_df,
+            exp_spectra_df,
+            on=["scan", "mz_file_path", "charge"],
+            how="inner",
+            validate="m:1",
+        )
         if len(psm_df) != len(self.df):
-            logger.warning("Some PSMs were not found in experimental spectral data")
+            raise ValueError(
+                f"SpectralSimilarity expected {len(self.df)} PSM rows after matching "
+                f"experimental spectra, but found {len(psm_df)}."
+            )
 
         psm_df = pd.merge(psm_df, pred_spectra_df, on=["processed_peptide", "charge"], how="inner")
+        if len(psm_df) != len(self.df):
+            raise ValueError(
+                f"SpectralSimilarity expected {len(self.df)} PSM rows after matching "
+                f"predicted spectra, but found {len(psm_df)}."
+            )
 
         n_rows = len(psm_df)
         logger.info(f"Matching experimental and predicted spectra for {n_rows} PSMs...")
@@ -830,46 +832,16 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
 
     @staticmethod
     def _resolve_mzml_paths(psms, params):
-        """Resolve per-PSM mzML file paths from config and PsmContainer."""
+        """Return ``<mzmlDir>/<run>.mzML`` for each PSM.
+
+        ``params`` must contain ``mzmlDir`` and each PSM must contain ``run``.
+        """
         import os
-        import re
 
         mzml_dir = params.get("mzmlDir", None)
         if mzml_dir is None:
             raise ValueError("mzmlDir is required for SpectralSimilarity feature generator.")
-
-        pattern = params.get("spectrumIdPattern", None)
-        mz_file_names = []
-        spectrum_ids = psms.spectrum_ids
-
-        if pattern:
-            logger.info(f"Using pattern: {pattern} to extract mzML file names from spectrum IDs.")
-            for spectrum_id in spectrum_ids:
-                mz_file_names.append(re.match(pattern, spectrum_id).group(1))
-            logger.info(f"mzML file names: {list(set(mz_file_names))}")
-        else:
-            logger.info("Spectrum ID pattern is not provided.")
-            if psms.ms_data_file_column is not None:
-                logger.info(f"Trying to extract mzML file names from {psms.ms_data_file_column}")
-                logger.info(f"MS data file format: {set(psms.psms[psms.ms_data_file_column])}")
-                for ms_data_file in psms.psms[psms.ms_data_file_column]:
-                    mz_file_basename = os.path.basename(ms_data_file).split(".")[0]
-                    if mz_file_basename.endswith(".mzML"):
-                        mz_file_basename = mz_file_basename[:-5]
-                    elif mz_file_basename.endswith("mzML"):
-                        mz_file_basename = mz_file_basename[:-4]
-                    mz_file_names.append(mz_file_basename)
-                logger.info(f"mzML file names: {list(set(mz_file_names))}")
-            else:
-                logger.info("MS data file information is not provided.")
-                logger.info(
-                    r"Trying to use the default pattern: (.+?)\.\d+\.\d+\.\d+ "
-                    "to extract mzML file names from spectrum IDs."
-                )
-                for spectrum_id in spectrum_ids:
-                    mz_file_names.append(re.match(r"(.+?)\.\d+\.\d+\.\d+", spectrum_id).group(1))
-
-        mz_file_paths = [os.path.join(mzml_dir, f"{mz_file}.mzML") for mz_file in mz_file_names]
+        mz_file_paths = [os.path.join(mzml_dir, f"{run}.mzML") for run in psms.df["run"]]
         for mz_file_path in set(mz_file_paths):
             if not os.path.exists(mz_file_path):
                 logger.error(f"mzML file not found: {mz_file_path}")
@@ -887,16 +859,21 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
         if model_type is None:
             raise ValueError("Model type is required for SpectralSimilarity feature generator.")
 
-        n = len(psms.peptides)
+        n = len(psms)
         collision_energy = params.get("collisionEnergy", None)
         instrument = params.get("instrument", None)
         fragmentation_type = params.get("fragmentationType", None)
 
         return cls(
-            spectrum_ids=psms.spectrum_ids,
-            peptides=psms.peptides,
-            charges=psms.charges,
-            scan_ids=psms.scan_ids,
+            spectrum_ids=psms.df["psm_id"].tolist(),
+            peptides=[
+                to_proforma(sequence, mods, sites)
+                for sequence, mods, sites in zip(
+                    psms.df["sequence"], psms.df["mods"], psms.df["mod_sites"]
+                )
+            ],
+            charges=psms.df["charge"].tolist(),
+            scan_ids=psms.df["scan"].tolist(),
             mz_file_paths=mz_file_paths,
             model_type=model_type,
             collision_energies=[collision_energy] * n if collision_energy else None,
@@ -910,13 +887,13 @@ class SpectralSimilarityFeatureGenerator(BaseFeatureGenerator):
             tolerance_ppm=params.get("tolerance", 20),
         )
 
-    def apply(self, psms, source):
+    def apply(self, psms):
         features = self.generate_features()
+        features = features.rename(columns={"spectrum_id": "psm_id"})
         psms.add_features(
-            features,
-            psms_key=[psms.spectrum_column, psms.peptide_column, psms.charge_column],
-            feature_key=self.id_column,
-            source=source,
+            features[["psm_id", *self.feature_columns]],
+            on="psm_id",
+            columns=self.feature_columns,
         )
 
 
