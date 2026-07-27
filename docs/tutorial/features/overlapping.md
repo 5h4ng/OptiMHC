@@ -21,7 +21,7 @@ The core idea: if multiple peptides within the same contig are confidently ident
 
 ### Step 1: Preprocessing and Filtering
 
-Peptide sequences are preprocessed (flanking AA removal, modification removal) and then filtered by length and entropy thresholds.
+Base peptide sequences are filtered by length and entropy thresholds.
 
 ### Step 2: Redundancy Removal
 

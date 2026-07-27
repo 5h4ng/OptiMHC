@@ -14,7 +14,6 @@ inputFile:
 decoyPrefix: DECOY_
 outputDir: ./results
 visualization: True
-removePreNxtAA: False
 numProcesses: 32
 showProgress: True
 keepIntermediate: True

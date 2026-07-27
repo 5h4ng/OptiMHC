@@ -18,10 +18,7 @@ The **Basic** feature (`name: Basic`) computes simple sequence-level properties 
 
 ### Preprocessing
 
-Before computing features, each peptide sequence undergoes:
-
-1. **Flanking amino acid removal** — strips the preceding/next amino acid notation (e.g., `K.PEPTIDE.R` → `PEPTIDE`).
-2. **Modification removal** — removes bracketed mass values (e.g., `PEPTM[147.035]IDE` → `PEPTMIDE`).
+The feature uses the unmodified peptide sequence provided by the PSM reader.
 
 ### Length Features
 
@@ -68,4 +65,4 @@ featureGenerator:
   - name: Basic
 ```
 
-No parameters are required. The Basic feature uses default preprocessing settings (`remove_pre_nxt_aa: true`, `remove_modification: true`).
+No parameters are required.

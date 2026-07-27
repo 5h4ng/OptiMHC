@@ -106,7 +106,7 @@ S_C = \sum_{j=1}^{3} W^{(C)}_{a_j, j}
 
 ### Preprocessing
 
-- Flanking amino acids are stripped and modifications are removed.
+- The feature uses the unmodified peptide sequence provided by the PSM reader.
 - Peptides for which no matching PWM is available (e.g., unsupported length for Class I) receive median-imputed values.
 
 ## Configuration

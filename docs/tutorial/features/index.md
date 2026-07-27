@@ -27,12 +27,11 @@ generator name without listing all of its output columns.
 | [PWM Score](pwm.md) | `PWM` | 1–3 per allele | Position weight matrix binding score |
 | [Overlapping Peptide Score](overlapping.md) | `OverlappingPeptide` | 4 | Graph-based peptide overlap and contig assembly features |
 
-## Preprocessing
+## Peptide representation
 
-Most features share common preprocessing steps:
-
-- **Strip flanking amino acids** — remove the preceding and next amino acid notation (e.g., `K.PEPTIDE.R` becomes `PEPTIDE`).
-- **Remove modifications** — strip bracketed mass annotations (e.g., `PEPTM[147.035]IDE` becomes `PEPTMIDE`).
+PIN and pepXML readers provide the unmodified peptide sequence to feature
+generators. Modifications and their positions are stored separately for features
+that need them.
 
 ??? note "Selenocysteine (U) handling"
     Selenocysteine (`U`) is an extremely rare amino acid that most prediction tools do not support. During preprocessing, `U` is automatically replaced with cysteine (`C`) to ensure compatibility with external tools such as Koina, DeepLC, MHCflurry, NetMHCpan, and the PWM scoring matrices.

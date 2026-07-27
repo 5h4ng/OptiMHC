@@ -52,6 +52,14 @@ peptidoform syntax. General ProForma and `UNIMOD:<id>` parsing do not need to be
 part of the PIN reader. The compatibility impact and migration path are still
 to be decided.
 
+## Remove legacy peptide preprocessing options
+
+PIN and pepXML readers now store the base peptide sequence separately from its
+modifications. Remove the obsolete flank-removal configuration and duplicate
+feature-level preprocessing after reviewing compatibility. If pepXML flanking
+residues are needed in the future, store them as explicit PSM fields instead of
+embedding them in the peptide sequence.
+
 ## Other follow-ups
 
 - [ ] Separate search-score transformation from

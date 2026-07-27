@@ -54,10 +54,9 @@ The available columns depend on which predictors were configured:
 
 ### Computation
 
-1. **Preprocess** peptide sequences: strip flanking amino acids and remove modifications.
-2. **Filter** peptides to length 8–30 (the supported range for NetMHCpan).
-3. **Predict** binding affinity for all peptide-allele combinations using `NetMHCpan 4.1 BA`.
-4. **Allele selection**: for each peptide, select the allele \( a^\* \) with the minimum percentile rank \( r \):
+1. **Filter** peptide sequences to length 8–30 (the supported range for NetMHCpan).
+2. **Predict** binding affinity for all peptide-allele combinations using `NetMHCpan 4.1 BA`.
+3. **Allele selection**: for each peptide, select the allele \( a^\* \) with the minimum percentile rank \( r \):
 
 \[
 a^\* = \arg\min\_{a} \; r(\text{peptide}, a)
@@ -102,10 +101,9 @@ NetMHCpan is a standalone executable that must be downloaded from [DTU Health Te
 
 ### Computation
 
-1. **Preprocess** peptide sequences: strip flanking amino acids and remove modifications.
-2. **Filter** peptides to length 9–50 (the supported range for NetMHCIIpan).
-3. **Predict** binding for all peptide-allele combinations using `NetMHCIIpan 4.3 BA`.
-4. **Allele selection**: for each peptide, select the allele with the minimum percentile rank.
+1. **Filter** peptide sequences to length 9–50 (the supported range for NetMHCIIpan).
+2. **Predict** binding for all peptide-allele combinations using `NetMHCIIpan 4.3 BA`.
+3. **Allele selection**: for each peptide, select the allele with the minimum percentile rank.
 
 Missing values are filled with the column median.
 
@@ -147,9 +145,8 @@ NetMHCIIpan is a standalone executable that must be downloaded from [DTU Health 
 
 ### Computation
 
-1. **Preprocess** peptide sequences: strip flanking amino acids and remove modifications.
-2. **Filter** peptides to length 8–15 (the supported range for MHCflurry).
-3. **Predict** MHCflurry outputs, including affinity and auxiliary model scores.
+1. **Filter** peptide sequences to length 8–15 (the supported range for MHCflurry).
+2. **Predict** MHCflurry outputs, including affinity and auxiliary model scores.
 
 Missing values (peptides outside the 8–15 length range) are filled with the column median.
 
