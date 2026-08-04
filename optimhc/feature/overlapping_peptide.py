@@ -415,7 +415,8 @@ class OverlappingPeptideFeatureGenerator(BaseFeatureGenerator):
         # TODO: Consider a true contig-level dense rank in a future version
         # Keep the peptide-row competition rank for v0.2.0 output compatibility
         features_df["contig_member_rank"] = features_df["contig_member_count"].rank(
-            method="min", ascending=False # method may turn to "dense" in the future
+            method="min",
+            ascending=False,  # method may turn to "dense" in the future
         )
         features_df["log_contig_member_rank"] = features_df["contig_member_rank"].apply(
             lambda x: np.log(x + 1e-6)

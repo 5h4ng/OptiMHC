@@ -77,9 +77,7 @@ def test_linear_layout_is_independent_of_lexicographic_endpoint_order():
     sink = "APSDQSDTSESDVDLGDG"
 
     features = (
-        _generator([source, sink], min_overlap_length=16)
-        .generate_features()
-        .set_index("Peptide")
+        _generator([source, sink], min_overlap_length=16).generate_features().set_index("Peptide")
     )
 
     assert features.loc[source, "contig_member_count"] == 2
@@ -106,9 +104,7 @@ def test_branching_graph_does_not_drop_internal_nodes():
 
 
 def test_raw_and_simplified_graphs_are_independent():
-    generator = _generator(
-        ["ABCDEFGH", "BCDEFGHI", "CDEFGHIJ"], min_overlap_length=6
-    )
+    generator = _generator(["ABCDEFGH", "BCDEFGHI", "CDEFGHIJ"], min_overlap_length=6)
 
     generator.generate_features()
 
