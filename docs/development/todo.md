@@ -12,21 +12,6 @@ Use mzML as a shared retention-time source so that downstream features and outpu
 do not depend on search-engine-specific PIN columns. The input matching and
 compatibility policy are still to be decided.
 
-## Fix DeepLC retention-time calibration across runs
-
-Tracked in
-[issue #23](https://github.com/5h4ng/OptiMHC/issues/23).
-The current DeepLC path calibrates all acquisition runs together:
-
-- [DeepLC input preparation](https://github.com/5h4ng/OptiMHC/blob/main/optimhc/feature/deeplc.py#L194-L208)
-- [Global calibration and prediction](https://github.com/5h4ng/OptiMHC/blob/main/optimhc/feature/deeplc.py#L244-L270)
-- [Feature attachment by `psm_id`](https://github.com/5h4ng/OptiMHC/blob/main/optimhc/feature/deeplc.py#L463-L467)
-
-This can mix different chromatographic retention-time scales in a multi-run analysis.
-Revisit the calibration design so that retention times remain comparable without
-mixing run-specific behavior. The implementation and compatibility policy are
-still to be decided.
-
 ## Simplify feature selection
 
 The current feature-group compatibility layer is spread across the generator
