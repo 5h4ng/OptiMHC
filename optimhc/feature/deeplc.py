@@ -44,12 +44,6 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
     mod_dict : dict, optional
         Unused compatibility argument.
 
-    Notes
-    -----
-    The current pipeline calibrates all loaded acquisition runs together.
-    Per-run calibration is tracked in
-    [issue #23](https://github.com/5h4ng/OptiMHC/issues/23).
-
     The generated features include:
     - observed_retention_time: Original retention time from the data
     - predicted_retention_time: DeepLC predicted retention time
@@ -171,6 +165,7 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         -------
         pd.DataFrame
             DataFrame with the required DeepLC format and original information:
+            - run: Acquisition run used to scope calibration
             - original_seq: Original peptide sequence
             - label: Target/decoy label
             - seq: Cleaned peptide sequence
@@ -191,6 +186,7 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         """
         df_deeplc = pd.DataFrame()
         df_psm = self.psms.df
+        df_deeplc["run"] = df_psm["run"]
         df_deeplc["original_seq"] = df_psm["sequence"]
         df_deeplc["label"] = ~df_psm["is_decoy"]
         df_deeplc["seq"] = df_psm["sequence"]
@@ -239,19 +235,30 @@ class DeepLCFeatureGenerator(BaseFeatureGenerator):
         # Extract DeepLC input DataFrame
         self.deeplc_df = self._get_deeplc_df()
 
-        # Calibrate DeepLC predictor
+        # Calibrate and predict each acquisition run separately. DeepLC stores
+        # calibration state on the predictor, so predictions for a run must be
+        # made immediately after calibrating with that run's reference PSMs.
         if self.calibration_set_size:
-            calibration_df = self._get_calibration_psms(self.deeplc_df)
-            logger.debug(f"Calibrating DeepLC with {len(calibration_df)} PSMs.")
-            self.deeplc_predictor.calibrate_preds(
-                seq_df=calibration_df[["seq", "tr", "modifications"]]
+            predictions = np.empty(len(self.deeplc_df), dtype=float)
+            run_positions = self.deeplc_df.groupby("run", sort=False).indices
+            for run, positions in run_positions.items():
+                run_df = self.deeplc_df.iloc[positions]
+                calibration_df = self._get_calibration_psms(run_df)
+                logger.debug(
+                    f"Calibrating DeepLC for run '{run}' with {len(calibration_df)} PSMs."
+                )
+                self.deeplc_predictor.calibrate_preds(
+                    seq_df=calibration_df[["seq", "tr", "modifications"]]
+                )
+                logger.info(f"Predicting retention times for run '{run}' using DeepLC.")
+                predictions[positions] = self.deeplc_predictor.make_preds(
+                    seq_df=run_df[["seq", "tr", "modifications"]]
+                )
+        else:
+            logger.info("Predicting retention times using DeepLC.")
+            predictions = self.deeplc_predictor.make_preds(
+                seq_df=self.deeplc_df[["seq", "tr", "modifications"]]
             )
-
-        # Predict retention times
-        logger.info("Predicting retention times using DeepLC.")
-        predictions = self.deeplc_predictor.make_preds(
-            seq_df=self.deeplc_df[["seq", "tr", "modifications"]]
-        )
 
         self._raw_predictions = pd.DataFrame(
             {
