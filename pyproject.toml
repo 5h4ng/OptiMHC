@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "optimhc"
-version = "0.2.0"
+version = "0.2.1"
 description = "A high-performance rescoring pipeline for immunopeptidomics data to significantly enhance peptide identification performance"
 authors = [
   { name="Zixiang Shang", email="steven5h4ng@gmail.com" }
