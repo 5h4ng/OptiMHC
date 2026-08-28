@@ -25,13 +25,11 @@ Peptide sequences are preprocessed for DeepLC input:
 
 ### Step 2: Calibration
 
-OptiMHC calibrates DeepLC with high-confidence PSMs from the full loaded
-dataset. In a multi-file analysis, PSMs from all files are calibrated together.
-Per-run calibration is planned in
-[issue #23](https://github.com/5h4ng/OptiMHC/issues/23). The current calibration
-procedure is:
+OptiMHC calibrates DeepLC separately for each acquisition run. This prevents
+files with different chromatographic gradients from influencing one another.
+For every run, the calibration procedure is:
 
-1. **Sort** all PSMs by the `calibrationCriteria` column (a search engine score). If `lowerIsBetter` is true, sort ascending; otherwise, sort descending.
+1. **Sort** the run's PSMs by the `calibrationCriteria` column (a search engine score). If `lowerIsBetter` is true, sort ascending; otherwise, sort descending.
 2. **Select** the top PSMs as the calibration set:
     - If `calibrationSize` is a float (e.g., 0.1), take the top 10% of PSMs.
     - If `calibrationSize` is an integer (e.g., 500), take the top 500 PSMs.
@@ -40,7 +38,8 @@ procedure is:
 
 ### Step 3: Prediction
 
-The calibrated DeepLC model predicts retention times for all PSMs in the dataset.
+Immediately after calibrating a run, DeepLC predicts retention times only for
+PSMs from that run. The predictions are then restored to the original PSM order.
 
 ### Step 4: Feature Computation
 

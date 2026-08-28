@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.2.1 - 2026-08-29
+
+### Fixed
+
+- DeepLC calibration and retention-time prediction now run separately for each
+  acquisition run, preventing pooled calibration across different chromatographic gradients.
+
 ## 0.2.0 - 2026-07-27
 
 ### Breaking
